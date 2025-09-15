@@ -10,7 +10,7 @@ This repository contains a production-ready, reusable template for building powe
 -   **Modular Custom Tools**: Extend the bot's capabilities by adding custom Python functions for business logic (e.g., booking appointments, capturing leads, escalating to support).
 -   **Automated Data Ingestion**: A smart script processes client-provided Markdown files, automatically chunks the data, and populates both the graph and vector databases.
 -   **Production-Ready API**: Built with **FastAPI**, including API key security, asynchronous processing, and concurrency limiting to handle real-world traffic.
--   **Powered by Google Gemini**: Leverages Google's powerful `gemini-1.5-flash` model for agent reasoning and `embedding-001` for high-quality vector embeddings.
+-   **Powered by Google Gemini**: Leverages Google's powerful `gemini-2.5-flash` model for agent reasoning and `embedding-001` for high-quality vector embeddings.
 
 ## 🛠️ Tech Stack
 

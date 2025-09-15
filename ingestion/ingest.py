@@ -3,16 +3,21 @@
 import os
 import re
 import hashlib
+import sys  # <-- Import the sys module
 from dotenv import load_dotenv
-from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import MarkdownHeaderTextSplitter
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_neo4j import Neo4jGraph
 from langchain_community.vectorstores import SupabaseVectorStore
 from supabase.client import Client, create_client
 from langchain_core.documents import Document
-from config.settings import settings # <-- Import settings from the central config
+
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config.settings import settings  # <-- This will now work
 
 # Load environment variables from the root .env file
 load_dotenv()
@@ -75,7 +80,7 @@ def main():
     current_files = {
         os.path.join(source_path, f): calculate_checksum(os.path.join(source_path, f))
         for f in os.listdir(source_path)
-        if os.path.isfile(os.path.join(source_path, f)) and f.endswith(".md")
+        if os.path.isfile(os.path.join(source_path, f)) and f.endswith(".pdf")
     }
 
     files_to_add = {f for f in current_files if f not in processed_log}
@@ -106,13 +111,17 @@ def main():
         all_chunks = []
         for file_path in files_to_process:
             print(f"  - Processing: {file_path}")
-            with open(file_path, 'r', encoding='utf-8') as f:
-                markdown_text = f.read()
+            
+            # Use PyPDFLoader for PDF files
+            loader = PyPDFLoader(file_path)
+            documents = loader.load()
 
-            # Use Markdown-aware splitter for intelligent chunking
-            headers_to_split_on = [("#", "Header 1"), ("##", "Header 2")]
-            markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on, strip_headers=False)
-            chunks = markdown_splitter.split_text(markdown_text)
+            # Use RecursiveCharacterTextSplitter for chunking
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=2000,  # Adjust chunk size as needed
+                chunk_overlap=200   # Adjust overlap as needed
+            )
+            chunks = text_splitter.split_documents(documents)
 
             for chunk in chunks:
                 chunk.page_content = normalize_text(standardize_terms(chunk.page_content))

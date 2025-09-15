@@ -18,7 +18,7 @@ class Settings:
 
     # --- LLM and Embeddings ---
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY")
-    GENERATIVE_MODEL: str = "gemini-1.5-flash"
+    GENERATIVE_MODEL: str = "gemini-2.5-flash"
     EMBEDDING_MODEL: str = "models/embedding-001"
     AGENT_TEMPERATURE: float = 0.1
     AGENT_MAX_ITERATIONS: int = 7
