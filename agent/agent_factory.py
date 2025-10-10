@@ -58,7 +58,10 @@ def create_agent_executor(memory):
     with open("agent/persona.prompt", "r") as f:
         persona_template = f.read()
 
-    prompt = PromptTemplate.from_template(persona_template)
+    prompt = PromptTemplate(
+        template=persona_template,
+        input_variables=["input", "history", "tools", "tool_names", "agent_scratchpad"]
+    )
     agent = create_react_agent(llm, all_tools, prompt)
 
     return AgentExecutor(
