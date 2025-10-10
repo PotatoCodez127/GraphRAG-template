@@ -70,7 +70,9 @@ async def chat_with_agent(request: ChatRequest):
             memory = ConversationBufferMemory(
                 memory_key="history",
                 chat_memory=message_history,
-                return_messages=True
+                return_messages=True,
+                input_key="input",      # <-- Add this
+                output_key="output"   # <-- Add this
             )
             agent_executor = create_agent_executor(memory)
             response = await agent_executor.ainvoke({"input": request.query})
