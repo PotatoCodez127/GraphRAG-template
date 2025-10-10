@@ -165,6 +165,14 @@ Interact with your running bot by sending POST requests to the `/chat` endpoint.
     }
     ```
 
+## 💾 Database
+
+You need to have a Supabase Account and Project to store all the data. Run the below SQL snippet to create the tables and schema needed for the project.
+
+```sql
+
+```
+
 ## ☁️ Deployment
 
 The included `Procfile` is configured for easy deployment on platforms like Heroku or Render.
