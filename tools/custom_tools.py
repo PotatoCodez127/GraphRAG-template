@@ -30,9 +30,11 @@ def get_custom_tools() -> list:
     """Returns a list of all custom tools available to the agent."""
     tools = [
         StructuredTool.from_function(
-            name="Book Zappies Onboarding Call",
+            # MODIFICATION: Changed the name to snake_case
+            name="book_zappies_onboarding_call",
             func=book_zappies_onboarding_call,
             args_schema=BookOnboardingCallArgs,
+            # MODIFICATION: Updated the description to match the new name
             description="Use this tool to book a new onboarding call ONLY after you have collected the user's full name, email, and company name AND after the user has confirmed these details are correct."
         )
     ]
