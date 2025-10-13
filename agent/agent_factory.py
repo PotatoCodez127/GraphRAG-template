@@ -4,7 +4,8 @@ from tools.custom_tools import get_custom_tools
 from langchain.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import create_react_agent, AgentExecutor
-from langchain.tools import Tool, render_text_description # <-- MODIFICATION: Import the tool renderer
+from langchain.tools import Tool
+from langchain_core.tools import render_text_description
 from langchain_neo4j import GraphCypherQAChain, Neo4jGraph
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -31,7 +32,7 @@ def create_agent_executor(memory):
         graph=graph, verbose=False, allow_dangerous_requests=True
     )
     graph_tool = Tool(
-        name="Knowledge Graph Search",
+        name="Knowledge_Graph_Search", # MODIFICATION: Standardized name
         func=graph_chain.invoke,
         description="Use for specific questions about rules, policies, costs, and fees."
     )
@@ -45,7 +46,7 @@ def create_agent_executor(memory):
         query_name=settings.DB_VECTOR_QUERY_NAME
     )
     vector_tool = Tool(
-        name="General Information Search",
+        name="General_Information_Search", # MODIFICATION: Standardized name
         func=vector_store.as_retriever().invoke,
         description="Use for general, conceptual, or 'how-to' questions."
     )
@@ -57,24 +58,21 @@ def create_agent_executor(memory):
     # --- Load Persona from File ---
     with open("agent/persona.prompt", "r") as f:
         persona_template = f.read()
-    
-    # --- MODIFICATION: Pre-format the prompt with static tool information ---
-    # 1. Get the tool descriptions for the {tools} placeholder
+
+    # --- Pre-format the prompt with static tool information ---
     rendered_tools = render_text_description(all_tools)
-    # 2. Get the tool names for the {tool_names} placeholder
     tool_names = ", ".join([t.name for t in all_tools])
 
     prompt = PromptTemplate(
         template=persona_template,
-        # 3. Define the variables the agent will receive during the conversation
         input_variables=["input", "history", "agent_scratchpad"],
-        # 4. Pre-fill the static variables that don't change
         partial_variables={
             "tools": rendered_tools,
             "tool_names": tool_names
         }
     )
 
+    # MODIFICATION: Revert to the create_react_agent
     agent = create_react_agent(llm, all_tools, prompt)
 
     return AgentExecutor(
@@ -82,7 +80,6 @@ def create_agent_executor(memory):
         tools=all_tools,
         memory=memory,
         verbose=True,
-        # MODIFICATION: Provide a specific error message for parsing failures.
-        handle_parsing_errors="Check your JSON formatting. Ensure the Action Input is a valid JSON object and nothing else follows the closing brace.",
+        handle_parsing_errors=True,
         max_iterations=settings.AGENT_MAX_ITERATIONS
     )
