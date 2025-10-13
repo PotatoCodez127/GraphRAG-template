@@ -1,21 +1,26 @@
 # tools/custom_tools.py
+import logging
 from langchain.tools import StructuredTool
 from .action_schemas import BookOnboardingCallArgs
 
+# Set up a basic logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # --- Tool Functions for Zappies AI's Internal Sales Bot ---
-# This function's goal is to book a meeting for YOUR team.
-# This would integrate with your company's calendar (e.g., Google Calendar, Calendly).
 
 def book_zappies_onboarding_call(name: str, email: str, company_name: str) -> str:
     """Books a 15-minute onboarding call with a potential client to discuss the 'Project Pipeline AI'."""
-    print("--- ACTION: Booking Zappies AI Onboarding Call ---")
-    print(f"Recipient Name: {name}")
-    print(f"Recipient Email: {email}")
-    print(f"Company: {company_name}")
-    print("--- END ACTION ---")
+    # Use the logger instead of print
+    logger.info("--- ACTION: Booking Zappies AI Onboarding Call ---")
+    logger.info(f"Recipient Name: {name}")
+    logger.info(f"Recipient Email: {email}")
+    logger.info(f"Company: {company_name}")
+    logger.info("--- END ACTION ---")
+    
     # In a real application, you would add your calendar API integration here.
     return (f"Excellent, {name}! I've just sent a calendar invitation for your 'Project Pipeline AI' onboarding call to {email}. "
-            "Our team is excited to show you how we can help grow {company_name}. ✨")
+            f"Our team is excited to show you how we can help grow {company_name}. ✨")
 
 # --- Tool Factory ---
 def get_custom_tools() -> list:
