@@ -4,7 +4,7 @@ from tools.custom_tools import get_custom_tools
 from langchain.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import create_react_agent, AgentExecutor
-from langchain.tools import Tool
+from langchain.tools import Tool, render_text_description # <-- MODIFICATION: Import the tool renderer
 from langchain_neo4j import GraphCypherQAChain, Neo4jGraph
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -57,11 +57,24 @@ def create_agent_executor(memory):
     # --- Load Persona from File ---
     with open("agent/persona.prompt", "r") as f:
         persona_template = f.read()
+    
+    # --- MODIFICATION: Pre-format the prompt with static tool information ---
+    # 1. Get the tool descriptions for the {tools} placeholder
+    rendered_tools = render_text_description(all_tools)
+    # 2. Get the tool names for the {tool_names} placeholder
+    tool_names = ", ".join([t.name for t in all_tools])
 
     prompt = PromptTemplate(
         template=persona_template,
-        input_variables=["input", "history", "tools", "tool_names", "agent_scratchpad"]
+        # 3. Define the variables the agent will receive during the conversation
+        input_variables=["input", "history", "agent_scratchpad"],
+        # 4. Pre-fill the static variables that don't change
+        partial_variables={
+            "tools": rendered_tools,
+            "tool_names": tool_names
+        }
     )
+
     agent = create_react_agent(llm, all_tools, prompt)
 
     return AgentExecutor(
