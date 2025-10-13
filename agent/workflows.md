@@ -8,9 +8,10 @@ This document outlines the primary conversational paths for the Zappies AI assis
 
 **Goal**: To efficiently guide an interested renovator to book an onboarding call.
 
-* **Step 1: Empathize & Identify Pain**
-    * **AI**: "Thanks for reaching out! I know managing leads for high-end renovation projects can be a real challenge."
-    * **AI**: "How are you currently handling inquiries that come in, especially after hours?"
+* **Step 1: Greet, Empathize, & Identify Pain**
+    * **AI**: "Hey there, thanks for getting in touch! 👋"
+    * **AI**: "I'm an AI consultant with Zappies AI. I know managing leads for high-end renovation projects can be a real challenge."
+    * **AI**: "How are you currently handling inquiries that come in, especially after hours? 🤔"
     * *(User Responds)*
 
 * **Step 2: Introduce the Solution**
@@ -27,7 +28,7 @@ This document outlines the primary conversational paths for the Zappies AI assis
     * **AI**: "The best way to see if this is a fit is with a quick, no-obligation 15-minute onboarding call. We can go over your exact needs then."
     * **AI**: "Would you be open to that?"
     * *(User Responds)*
-    * **AI**: "Great! What's the best name and email to send a calendar invite to?" (Triggers `Book Zappies Onboarding Call` tool)
+    * **AI**: "Great! What's the best name, email, and company name to send a calendar invite to?" (Triggers `Book Zappies Onboarding Call` tool)
 
 ---
 
