@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 def book_zappies_onboarding_call(data: BookOnboardingCallArgs) -> str:
     """Books a 15-minute onboarding call with a potential client to discuss the 'Project Pipeline AI'."""
-    name = data.name
+    # MODIFICATION: Changed 'data.name' to 'data.full_name'
+    name = data.full_name
     email = data.email
     company_name = data.company_name
 
@@ -32,7 +33,6 @@ def get_custom_tools() -> list:
             name="Book Zappies Onboarding Call",
             func=book_zappies_onboarding_call,
             args_schema=BookOnboardingCallArgs,
-            # MODIFICATION: The description now emphasizes the confirmation step.
             description="Use this tool to book a new onboarding call ONLY after you have collected the user's full name, email, and company name AND after the user has confirmed these details are correct."
         )
     ]
