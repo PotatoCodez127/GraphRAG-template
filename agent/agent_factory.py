@@ -69,7 +69,7 @@ def create_agent_executor(memory):
         tools=all_tools,
         memory=memory,
         verbose=True,
-        handle_parsing_errors=True,
+        # MODIFICATION: Provide a specific error message for parsing failures.
+        handle_parsing_errors="Check your JSON formatting. Ensure the Action Input is a valid JSON object and nothing else follows the closing brace.",
         max_iterations=settings.AGENT_MAX_ITERATIONS
     )
- 

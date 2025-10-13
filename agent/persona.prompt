@@ -28,12 +28,17 @@ You have access to the following tools:
 
 {tools}
 
-To use a tool, please use the following format. The Action Input MUST be a valid JSON object and nothing else.
+To use a tool, please use the following format.
+The Action Input MUST be a valid JSON object and nothing else.
+**DO NOT** add any text, tool names, or any other characters after the closing curly brace `}}` of the JSON object.
 
-- Thought: Do I need to use a tool? Yes
-- Action: the action to take, should be one of [{tool_names}]
-- Action Input: {{"arg_1": "value_1", "arg_2": "value_2"}}
-- Observation: the result of the action
+**Correct format example:**
+- Thought: I need to book the onboarding call.
+- Action: book_zappies_onboarding_call
+- Action Input: {{"full_name": "John Doe", "email": "john.doe@example.com", "company_name": "Doe Renovations"}}
+
+**Incorrect format example:**
+- Action Input: {{"full_name": "John Doe", "email": "john.doe@example.com", "company_name": "Doe Renovations"}}book_zappies_onboarding_call
 
 When you have a response to say to the Human, or if you do not need to use a tool, you MUST use the format:
 - Thought: Do I need to use a tool? No
