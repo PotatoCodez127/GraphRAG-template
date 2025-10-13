@@ -1,44 +1,31 @@
 # tools/custom_tools.py
 from langchain.tools import StructuredTool
-from .action_schemas import GatherLeadArgs, EscalateToHumanArgs
+from .action_schemas import BookOnboardingCallArgs
 
-# --- Tool Functions ---
-# Replace these functions with your client's actual business logic.
-# This is where you would integrate with a CRM, calendar, etc.
+# --- Tool Functions for Zappies AI's Internal Sales Bot ---
+# This function's goal is to book a meeting for YOUR team.
+# This would integrate with your company's calendar (e.g., Google Calendar, Calendly).
 
-def gather_lead(name: str, email: str, company: str, service_interest: str) -> str:
-    """Gathers lead information and sends it to the sales team."""
-    print("--- ACTION: Capturing New Lead ---")
-    print(f"Name: {name}, Email: {email}, Company: {company}, Interest: {service_interest}")
+def book_zappies_onboarding_call(name: str, email: str, company_name: str) -> str:
+    """Books a 15-minute onboarding call with a potential client to discuss the 'Project Pipeline AI'."""
+    print("--- ACTION: Booking Zappies AI Onboarding Call ---")
+    print(f"Recipient Name: {name}")
+    print(f"Recipient Email: {email}")
+    print(f"Company: {company_name}")
     print("--- END ACTION ---")
-    return (f"Thank you, {name}! I've passed your interest in '{service_interest}' "
-            f"to our team. They will email you at {email} shortly with more information. ✨")
-
-def escalate_to_human(name: str, phone: str, reason: str) -> str:
-    """Handles a user's request to speak to a person."""
-    print("--- ACTION: Escalating to Human Support ---")
-    print(f"Name: {name}, Phone: {phone}, Reason: {reason}")
-    print("--- END ACTION ---")
-    return (f"Thank you, {name}. I've created a ticket for our support team. "
-            f"Someone will call you at {phone} as soon as possible to help with: '{reason}'.")
+    # In a real application, you would add your calendar API integration here.
+    return (f"Excellent, {name}! I've just sent a calendar invitation for your 'Project Pipeline AI' onboarding call to {email}. "
+            "Our team is excited to show you how we can help grow {company_name}. ✨")
 
 # --- Tool Factory ---
-# This function dynamically provides the tools to the agent.
-# Simply add or remove tools from this list to change the bot's capabilities.
 def get_custom_tools() -> list:
     """Returns a list of all custom tools available to the agent."""
     tools = [
         StructuredTool.from_function(
-            name="Gather Business Lead",
-            func=gather_lead,
-            args_schema=GatherLeadArgs,
-            description="Use this when a user expresses interest in a product, service, or pricing. You must first ask for their name, email, and what service they are interested in."
-        ),
-        StructuredTool.from_function(
-            name="Escalate to a Human",
-            func=escalate_to_human,
-            args_schema=EscalateToHumanArgs,
-            description="Use this tool when the user explicitly asks to speak to a person, staff member, or human. You must first ask for their name, phone number, and a brief reason for their request."
+            name="Book Zappies Onboarding Call",
+            func=book_zappies_onboarding_call,
+            args_schema=BookOnboardingCallArgs,
+            description="Use this tool to book a new onboarding call with a renovator who is interested in the 'Project Pipeline AI'. You must first ask for their full name, email address, and company name."
         )
     ]
     return tools
