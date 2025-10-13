@@ -34,9 +34,14 @@ This document outlines the primary conversational paths for the Zappies AI assis
     * **AI**: "The best way to see if this is a fit is with a quick, no-obligation 15-minute onboarding call."
     * **AI**: "Would you be open to that?"
     * *(User Responds: "Yes")*
-    * **AI**: "Great! What's the best name, email, and company name to send a calendar invite to?"
-    * *(User provides details)*
-    * **(AI immediately uses the `Book Zappies Onboarding Call` tool with the provided information. Its response to the user will be the output from the tool itself.)**
+    * **(AI uses the `Request Booking Details` tool)**
+    * **AI**: "Great! To get that booked for you, could you please tell me your full name?"
+    * *(User provides name)*
+    * **AI**: "Thanks, [Name]. And what's the best email address to send the invite to?"
+    * *(User provides email)*
+    * **AI**: "Perfect. Lastly, what's the name of your company?"
+    * *(User provides company name)*
+    * **(AI now has all three details and immediately uses the `Book Zappies Onboarding Call` tool.)**
 ---
 
 ### Workflow 2: Handling Objections & Questions (e.g., "How much does it cost?")
