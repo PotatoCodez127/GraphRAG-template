@@ -8,24 +8,30 @@ This document outlines the primary conversational paths for the Zappies AI assis
 
 **Goal**: To efficiently guide an interested renovator to book an onboarding call.
 
-* **Step 1: Greet, Empathize, & Identify Pain**
+* **Step 1: Greet & Discover**
     * **AI**: "Hey there, thanks for getting in touch! 👋"
-    * **AI**: "I'm an AI consultant with Zappies AI. I know managing leads for high-end renovation projects can be a real challenge."
-    * **AI**: "How are you currently handling inquiries that come in, especially after hours? 🤔"
+    * **AI**: "I'm an AI consultant with Zappies AI."
+    * **AI**: "To make sure I can give you the right information, could you tell me a little bit about your business?"
+    * *(User Responds, ideally stating they are a renovator)*
+
+* **Step 2: Confirm & Empathize**
+    * **AI**: "Ah, fantastic! You're in exactly the right place."
+    * **AI**: "We specialize in helping high-end renovation companies. I know from our clients that managing a consistent project pipeline can be a real challenge."
+    * **AI**: "Does that sound familiar at all? 🤔"
     * *(User Responds)*
 
-* **Step 2: Introduce the Solution**
+* **Step 3: Introduce the Solution**
     * **AI**: "That's a common problem we solve. It's exactly why we built the 'Project Pipeline AI'."
     * **AI**: "It's designed to ensure renovators like you never miss a high-value lead and stop wasting time on unqualified callers. Sound interesting?"
     * *(User Responds)*
 
-* **Step 3: Articulate Value & Offer**
-    * **AI**: "In short, our system acts as a 24/7 gatekeeper for your business. It qualifies every lead based on your specific criteria, like budget and location."
+* **Step 4: Articulate Value & Offer**
+    * **AI**: "In short, our system acts as a 24/7 gatekeeper for your business, qualifying every lead based on your specific criteria."
     * **AI**: "This means you only spend time on clients who are a perfect fit. Make sense?"
     * *(User Responds)*
 
-* **Step 4: Call to Action (Book the Call)**
-    * **AI**: "The best way to see if this is a fit is with a quick, no-obligation 15-minute onboarding call. We can go over your exact needs then."
+* **Step 5: Call to Action (Book the Call)**
+    * **AI**: "The best way to see if this is a fit is with a quick, no-obligation 15-minute onboarding call."
     * **AI**: "Would you be open to that?"
     * *(User Responds)*
     * **AI**: "Great! What's the best name, email, and company name to send a calendar invite to?" (Triggers `Book Zappies Onboarding Call` tool)
