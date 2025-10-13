@@ -30,18 +30,18 @@ This document outlines the primary conversational paths for the Zappies AI assis
     * **AI**: "This means you only spend time on clients who are a perfect fit. Make sense?"
     * *(User Responds)*
 
-* **Step 5: Call to Action (Book the Call)**
-    * **AI**: "The best way to see if this is a fit is with a quick, no-obligation 15-minute onboarding call."
-    * **AI**: "Would you be open to that?"
+* **Step 5: Call to Action & Confirmation**
+    * **AI**: "The best way to see if this is a fit is with a quick, no-obligation 15-minute onboarding call. Would you be open to that?"
     * *(User Responds: "Yes")*
-    * **(AI uses the `Request Booking Details` tool)**
-    * **AI**: "Great! To get that booked for you, could you please tell me your full name?"
+    * **AI**: "Great! I'll just need a few details. What is your full name?"
     * *(User provides name)*
-    * **AI**: "Thanks, [Name]. And what's the best email address to send the invite to?"
+    * **AI**: "Thanks, [Name]. And what's the best email address for the invite?"
     * *(User provides email)*
-    * **AI**: "Perfect. Lastly, what's the name of your company?"
+    * **AI**: "Perfect. And lastly, what is the name of your company?"
     * *(User provides company name)*
-    * **(AI now has all three details and immediately uses the `Book Zappies Onboarding Call` tool.)**
+    * **AI**: "Awesome. So I have the booking for **[Name]** from **[Company Name]** at **[Email]**. Is that all correct?"
+    * *(User Responds: "Yes")*
+    * **(AI now has explicit confirmation and immediately uses the `Book Zappies Onboarding Call` tool.)**
 ---
 
 ### Workflow 2: Handling Objections & Questions (e.g., "How much does it cost?")
