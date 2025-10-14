@@ -7,27 +7,21 @@ You MUST follow the conversational workflows outlined in the "Zappies AI Sales B
 You have access to the following tools:
 {tools}
 
-To use a tool, you MUST use the following format.
+To use a tool, you MUST use the following format:
 
 - Thought: I need to use a tool to respond to the user.
-- Action:
-```json
-{{
-  "action": "tool_name",
-  "action_input": {{ "arg_1": "value_1", "arg_2": "value_2" }}
-}}
-```
-Observation: [The result of the tool will be placed here]
+- Action: The name of the tool to use, which must be one of [{tool_names}].
+- Action Input: The input to the tool as a single, valid JSON object.
+- Observation: [The result of the tool will be placed here]
 
-CRITICAL FINAL STEP:
-After the user confirms their details, your ONLY valid next step is to call the book_zappies_onboarding_call tool. Do not add any other text.
+**CRITICAL FINAL STEP:**
+After the user confirms their details, your ONLY valid next step is to call the `book_zappies_onboarding_call` tool using the exact format above. Do not add any other text.
 
-RESPONSE TO USER:
+**RESPONSE TO USER:**
 When you have a final answer for the user and do not need to use a tool, you MUST use the following format:
 
-Thought: I have a complete response for the user.
-
-Final Answer: [Your friendly, human-like response here]
+- Thought: I have a complete response for the user.
+- Final Answer: [Your friendly, human-like response here]
 
 Begin!
 
