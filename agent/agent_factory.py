@@ -10,6 +10,7 @@ from langchain_neo4j import GraphCypherQAChain, Neo4jGraph
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from supabase.client import Client, create_client
+from .output_parser import CustomOutputParser # <-- MODIFICATION: Import the new parser
 
 def create_agent_executor(memory):
     """
@@ -31,9 +32,8 @@ def create_agent_executor(memory):
         ChatGoogleGenerativeAI(model=settings.GENERATIVE_MODEL, temperature=0),
         graph=graph, verbose=False, allow_dangerous_requests=True
     )
-    # Reverting to original tool name for simplicity
     graph_tool = Tool(
-        name="Knowledge Graph Search",
+        name="Knowledge_Graph_Search",
         func=graph_chain.invoke,
         description="Use for specific questions about rules, policies, costs, and fees."
     )
@@ -46,9 +46,8 @@ def create_agent_executor(memory):
         table_name=settings.DB_VECTOR_TABLE,
         query_name=settings.DB_VECTOR_QUERY_NAME
     )
-    # Reverting to original tool name for simplicity
     vector_tool = Tool(
-        name="General Information Search",
+        name="General_Information_Search",
         func=vector_store.as_retriever().invoke,
         description="Use for general, conceptual, or 'how-to' questions."
     )
@@ -81,7 +80,9 @@ def create_agent_executor(memory):
         tools=all_tools,
         memory=memory,
         verbose=True,
-        # Let the server handle parsing errors
+        # MODIFICATION: Use our robust custom parser
+        output_parser=CustomOutputParser(),
+        # We no longer need the generic error handling for this specific issue
         handle_parsing_errors=True,
         max_iterations=settings.AGENT_MAX_ITERATIONS
     )
