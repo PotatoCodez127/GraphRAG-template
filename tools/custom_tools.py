@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # --- Tool Functions ---
 
 def check_availability(date: str) -> str:
-    # This function remains the same, as it already worked correctly.
+    # ... (no changes in this function)
     logger.info(f"--- ACTION: Checking availability for {date} ---")
     try:
         data = json.loads(date)
@@ -27,24 +27,19 @@ def check_availability(date: str) -> str:
         return f"I'm sorry, but there are no available slots on {date_to_check}. Please try another date."
     return f"Here are the available slots for {date_to_check}: {', '.join(available_slots)}"
 
-# --- DEFINITIVE FIX ---
-# This function is now designed to accept a single JSON string.
 def book_zappies_onboarding_call_from_json(json_string: str) -> str:
     """Books the onboarding call from a JSON string."""
     logger.info("--- ACTION: Booking Zappies AI Onboarding Call ---")
     logger.info(f"Received raw JSON string: {json_string}")
 
     try:
-        # 1. Manually parse the JSON string.
         data = json.loads(json_string)
-        # 2. Manually validate the data with our Pydantic schema.
         validated_args = BookOnboardingCallArgs(**data)
     except (json.JSONDecodeError, ValidationError) as e:
         error_message = f"Failed to parse or validate booking details from JSON. Error: {e}"
         logger.error(error_message, exc_info=True)
         return f"I'm sorry, there was a problem with the booking details provided. Please try again. Details: {error_message}"
 
-    # 3. Proceed with the validated data.
     full_name = validated_args.full_name
     email = validated_args.email
     company_name = validated_args.company_name
@@ -63,6 +58,10 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
         create_calendar_event(start_time, summary, description, attendees)
         return (f"Excellent, {full_name}! I've just sent a calendar invitation for your 'Project Pipeline AI' onboarding call to {email} for {start_time}. "
                 f"Our team is excited to show you how we can help grow {company_name}. ✨")
+    # --- CATCH NEW ERROR ---
+    except ValueError as e:
+        logger.error(f"Booking validation error: {e}")
+        return f"I'm sorry, I cannot book that appointment. {e}"
     except Exception as e:
         logger.error(f"Error creating calendar event: {e}", exc_info=True)
         return f"I'm sorry, but there was an error booking the call: {str(e)}"
@@ -77,8 +76,6 @@ def get_custom_tools() -> list:
             args_schema=CheckAvailabilityArgs,
             description="Use this tool to check for available time slots on a specific date."
         ),
-        # --- DEFINITIVE FIX ---
-        # We now use the basic Tool class and provide a clear description for the AI.
         Tool(
             name="book_zappies_onboarding_call",
             func=book_zappies_onboarding_call_from_json,

@@ -1,6 +1,8 @@
 # api/server.py
 import asyncio
-import logging # <-- Add this import
+import logging
+import datetime  # <-- Add this import
+import pytz      # <-- Add this import
 from fastapi import FastAPI, HTTPException, Depends, Header, status
 from pydantic import BaseModel
 from supabase.client import Client, create_client
@@ -83,15 +85,18 @@ async def chat_with_agent(request: ChatRequest):
 
             agent_executor = create_agent_executor(memory)
 
-            # --- ADD THIS ENHANCED LOGGING ---
+            # Get current time in the correct timezone
+            sast_tz = pytz.timezone("Africa/Johannesburg")
+            current_time_sast = datetime.datetime.now(sast_tz).strftime('%A, %Y-%m-%d %H:%M:%S %Z')
+
             agent_input = {
                 "input": request.query,
-                "history": memory.chat_memory.messages
+                "history": memory.chat_memory.messages,
+                "current_time": current_time_sast  # <-- Inject current time here
             }
             logger.info(f"--- AGENT INPUT FOR CONVO ID: {request.conversation_id} ---")
             logger.info(agent_input)
             logger.info("----------------------------------------------------")
-            # ------------------------------------
             
             response = await agent_executor.ainvoke(agent_input)
             
