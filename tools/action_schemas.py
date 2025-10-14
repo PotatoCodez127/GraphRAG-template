@@ -11,3 +11,14 @@ class BookOnboardingCallArgs(BaseModel):
     email: str = Field(description="The business email address where the calendar invite should be sent.")
     company_name: str = Field(description="The name of their renovation company.")
     start_time: str = Field(description="The start time for the meeting in ISO 8601 format (e.g., '2023-10-27T09:00:00').")
+
+class CancelAppointmentArgs(BaseModel):
+    """Schema for canceling an existing onboarding call."""
+    email: str = Field(description="The email address used to book the original appointment.")
+    original_start_time: str = Field(description="The original start time of the appointment to be canceled, in ISO 8601 format.")
+
+class RescheduleAppointmentArgs(BaseModel):
+    """Schema for rescheduling an existing onboarding call."""
+    email: str = Field(description="The email address used to book the original appointment.")
+    original_start_time: str = Field(description="The original start time of the appointment to be rescheduled, in ISO 8601 format.")
+    new_start_time: str = Field(description="The new desired start time for the appointment, in ISO 8601 format.")
