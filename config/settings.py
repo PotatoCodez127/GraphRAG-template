@@ -31,6 +31,9 @@ class Settings:
     NEO4J_URI: str = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     NEO4J_USERNAME: str = os.getenv("NEO4J_USERNAME", "neo4j")
     NEO4J_PASSWORD: str = os.getenv("NEO4J_PASSWORD")
+    
+    # --- Google Calendar ---
+    GOOGLE_CALENDAR_ID: str = os.getenv("GOOGLE_CALENDAR_ID", "primary")
 
     # --- Data Ingestion ---
     SOURCE_DIRECTORY_PATH: str = "data/"

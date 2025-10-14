@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 instance/
+credentials.json
+token.json
+service_account.json
