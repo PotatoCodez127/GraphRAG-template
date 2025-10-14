@@ -65,7 +65,9 @@ def create_calendar_event(start_time: str, summary: str, description: str, atten
     Creates a new event in the Google Calendar.
     """
     service = get_calendar_service()
-    start = datetime.datetime.fromisoformat(start_time)
+    
+    # Use dateutil.parser to handle more flexible date formats
+    start = parse(start_time)
     end = start + datetime.timedelta(minutes=15)
 
     event = {
