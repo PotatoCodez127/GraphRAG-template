@@ -67,11 +67,12 @@ async def chat_with_agent(request: ChatRequest):
                 session_id=request.conversation_id,
                 table_name=settings.DB_CONVERSATION_HISTORY_TABLE
             )
+            # --- THIS IS THE FIX ---
             memory = ConversationBufferMemory(
                 memory_key="history",
                 chat_memory=message_history,
                 return_messages=True,
-                input_key="input"  # <-- MEMORY FIX
+                input_key="input"  # Explicitly tell the memory which key to use
             )
 
             agent_executor = create_agent_executor(memory)

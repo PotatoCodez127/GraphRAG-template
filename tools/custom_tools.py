@@ -5,13 +5,13 @@ from langchain.tools import StructuredTool
 from langchain_core.tools import Tool
 from pydantic import ValidationError
 from .action_schemas import (
-    BookOnboardingCallArgs, 
+    BookOnboardingCallArgs,
     CheckAvailabilityArgs,
     CancelAppointmentArgs,
     RescheduleAppointmentArgs
 )
 from .google_calendar import (
-    get_available_slots, 
+    get_available_slots,
     create_calendar_event,
     find_event_by_details,
     update_calendar_event,
@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def check_availability(date: str) -> str:
+    # This function remains the same
     logger.info(f"--- ACTION: Checking availability for {date} ---")
     try:
         data = json.loads(date)
@@ -35,6 +36,7 @@ def check_availability(date: str) -> str:
     return f"Here are the available slots for {date_to_check}: {', '.join(available_slots)}"
 
 def book_zappies_onboarding_call_from_json(json_string: str) -> str:
+    # This function remains the same
     logger.info(f"--- ACTION: Booking Zappies AI Onboarding Call ---")
     try:
         data = json.loads(json_string)
@@ -51,8 +53,20 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
         logger.error(f"Booking/validation error: {e}", exc_info=True)
         return f"I'm sorry, I cannot book that appointment. {e}"
 
-def cancel_appointment(email: str, original_start_time: str) -> str:
-    logger.info(f"--- ACTION: Canceling appointment for {email} at {original_start_time} ---")
+# --- NEW JSON-BASED FUNCTIONS ---
+
+def cancel_appointment_from_json(json_string: str) -> str:
+    """Cancels an appointment from a JSON string."""
+    logger.info(f"--- ACTION: Canceling appointment from JSON ---")
+    try:
+        data = json.loads(json_string)
+        validated_args = CancelAppointmentArgs(**data)
+    except (json.JSONDecodeError, ValidationError) as e:
+        return f"Sorry, the details provided for cancellation were not valid. Error: {e}"
+
+    email = validated_args.email
+    original_start_time = validated_args.original_start_time
+    
     event_id = find_event_by_details(email, original_start_time)
     if not event_id:
         return f"I couldn't find an appointment for {email} at that time. Please check the details."
@@ -63,8 +77,19 @@ def cancel_appointment(email: str, original_start_time: str) -> str:
         logger.error(f"Error canceling event: {e}", exc_info=True)
         return f"Sorry, there was an error canceling your appointment: {str(e)}"
 
-def reschedule_appointment(email: str, original_start_time: str, new_start_time: str) -> str:
-    logger.info(f"--- ACTION: Rescheduling for {email} from {original_start_time} to {new_start_time} ---")
+def reschedule_appointment_from_json(json_string: str) -> str:
+    """Reschedules an appointment from a JSON string."""
+    logger.info(f"--- ACTION: Rescheduling appointment from JSON ---")
+    try:
+        data = json.loads(json_string)
+        validated_args = RescheduleAppointmentArgs(**data)
+    except (json.JSONDecodeError, ValidationError) as e:
+        return f"Sorry, the details provided for rescheduling were not valid. Error: {e}"
+
+    email = validated_args.email
+    original_start_time = validated_args.original_start_time
+    new_start_time = validated_args.new_start_time
+
     event_id = find_event_by_details(email, original_start_time)
     if not event_id:
         return f"I couldn't find an appointment for {email} at the original time. Please check the details."
@@ -79,7 +104,7 @@ def reschedule_appointment(email: str, original_start_time: str, new_start_time:
 def get_custom_tools() -> list:
     """Returns a list of all custom tools available to the agent."""
     tools = [
-        StructuredTool.from_function(
+        StructuredTool(
             name="check_availability",
             func=check_availability,
             args_schema=CheckAvailabilityArgs,
@@ -93,17 +118,21 @@ def get_custom_tools() -> list:
                 "'full_name', 'email', 'company_name', and 'start_time'."
             )
         ),
-        StructuredTool.from_function(
+        Tool(
             name="cancel_appointment",
-            func=cancel_appointment,
-            args_schema=CancelAppointmentArgs,
-            description="Use to cancel an existing appointment. You need the user's email and the original start time."
+            func=cancel_appointment_from_json,
+            description=(
+                "Use to cancel an existing appointment. The input must be a single, valid JSON string with keys: "
+                "'email' and 'original_start_time'."
+            )
         ),
-        StructuredTool.from_function(
+        Tool(
             name="reschedule_appointment",
-            func=reschedule_appointment,
-            args_schema=RescheduleAppointmentArgs,
-            description="Use to reschedule an existing appointment. You need the user's email, the original start time, and the new start time."
+            func=reschedule_appointment_from_json,
+            description=(
+                "Use to reschedule an existing appointment. The input must be a single, valid JSON string with keys: "
+                "'email', 'original_start_time', and 'new_start_time'."
+            )
         )
     ]
     return tools

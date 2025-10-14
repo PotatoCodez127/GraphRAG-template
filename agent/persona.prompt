@@ -35,6 +35,12 @@ Action: cancel_appointment
 Action Input: {{"email": "jeandre.c127@gmail.com", "original_start_time": "2023-10-27T09:00:00"}}
 </example_cancel>
 
+<example_reschedule>
+Thought: The user wants to reschedule a call. I have all the required details.
+Action: reschedule_appointment
+Action Input: {{"email": "jeandre.c127@gmail.com", "original_start_time": "2023-10-27T09:00:00", "new_start_time": "2023-10-28T14:00:00"}}
+</example_reschedule>
+
 ***MOST IMPORTANT RULE***
 After the final closing brace `}}` of the JSON in the 'Action Input', you MUST STOP.
 DO NOT add any other text, characters, or newlines.
