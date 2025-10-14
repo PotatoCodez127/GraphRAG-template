@@ -50,7 +50,7 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
     logger.info(f"Company: {company_name}")
     logger.info(f"Start Time: {start_time}")
 
-    summary = f"Project Pipeline AI Onboarding Call with {company_name}"
+    summary = f"Onboard Call with {company_name} | Whatsapp"
     description = f"Onboarding call with {full_name} from {company_name} to discuss the 'Project Pipeline AI'."
     attendees = [email]
 

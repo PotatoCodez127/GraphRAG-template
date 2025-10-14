@@ -18,10 +18,17 @@ def get_calendar_service():
     return service
 
 def get_available_slots(date: str) -> list[str]:
-    # ... (no changes in this function)
+    """
+    Checks for available 15-minute slots on a given date.
+    Returns a list of available start times in ISO 8601 format.
+    """
     service = get_calendar_service()
-    day_start = datetime.datetime.fromisoformat(date).astimezone(pytz.timezone("Africa/Johannesburg"))
+    sast_tz = pytz.timezone("Africa/Johannesburg")
+    # Ensure the start date is timezone-aware from the beginning
+    day_start = sast_tz.localize(datetime.datetime.fromisoformat(date))
     day_end = day_start + datetime.timedelta(days=1)
+
+    # Get all events for the given day
     events_result = service.events().list(
         calendarId=CALENDAR_ID,
         timeMin=day_start.isoformat(),
@@ -30,22 +37,31 @@ def get_available_slots(date: str) -> list[str]:
         orderBy='startTime'
     ).execute()
     events = events_result.get('items', [])
+
+    # Define working hours (e.g., 9 AM to 5 PM)
     working_hours_start = day_start.replace(hour=9, minute=0, second=0, microsecond=0)
     working_hours_end = day_start.replace(hour=17, minute=0, second=0, microsecond=0)
+
     available_slots = []
     current_time = working_hours_start
+
     while current_time < working_hours_end:
         slot_end = current_time + datetime.timedelta(minutes=15)
         is_free = True
+
         for event in events:
-            event_start = datetime.datetime.fromisoformat(event['start'].get('dateTime'))
-            event_end = datetime.datetime.fromisoformat(event['end'].get('dateTime'))
+            # Ensure event times from Google are also timezone-aware for comparison
+            event_start = parse(event['start'].get('dateTime')).astimezone(sast_tz)
+            event_end = parse(event['end'].get('dateTime')).astimezone(sast_tz)
             if not (slot_end <= event_start or current_time >= event_end):
                 is_free = False
                 break
+
         if is_free:
             available_slots.append(current_time.isoformat())
+        
         current_time = slot_end
+
     return available_slots
 
 def create_calendar_event(start_time: str, summary: str, description: str, attendees: list[str]) -> dict:
@@ -53,11 +69,16 @@ def create_calendar_event(start_time: str, summary: str, description: str, atten
     Creates a new event in the Google Calendar.
     """
     service = get_calendar_service()
+    sast_tz = pytz.timezone("Africa/Johannesburg")
     
-    start = parse(start_time)
+    # Use dateutil.parser to handle flexible date formats
+    naive_start = parse(start_time)
+    
+    # --- THIS IS THE FIX ---
+    # Make the naive datetime object timezone-aware
+    start = sast_tz.localize(naive_start)
 
     # --- ADDED SAFETY CHECKS ---
-    sast_tz = pytz.timezone("Africa/Johannesburg")
     now_sast = datetime.datetime.now(sast_tz)
     
     # Check if the requested time is in the past

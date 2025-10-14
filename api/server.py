@@ -1,8 +1,8 @@
 # api/server.py
 import asyncio
 import logging
-import datetime  # <-- Add this import
-import pytz      # <-- Add this import
+import datetime
+import pytz
 from fastapi import FastAPI, HTTPException, Depends, Header, status
 from pydantic import BaseModel
 from supabase.client import Client, create_client
@@ -12,19 +12,15 @@ from langchain.memory import ConversationBufferMemory
 from langchain.schema import BaseChatMessageHistory
 from langchain.schema.messages import BaseMessage, messages_from_dict, messages_to_dict
 
-# --- ADD THIS LOGGING SETUP ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-# -----------------------------
 
-# Initialize FastAPI app with settings
 app = FastAPI(
     title=settings.API_TITLE,
     description=settings.API_DESCRIPTION,
     version=settings.API_VERSION
 )
 
-# --- API Security Dependency ---
 async def verify_api_key(x_api_key: str = Header()):
     if not settings.API_SECRET_KEY:
         raise HTTPException(
@@ -37,14 +33,10 @@ async def verify_api_key(x_api_key: str = Header()):
             detail="Invalid or missing API Key."
         )
 
-# --- Concurrency Limiter ---
 agent_semaphore = asyncio.Semaphore(settings.CONCURRENCY_LIMIT)
-
-# --- Supabase Connection & Chat History Class ---
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
 
 class SupabaseChatMessageHistory(BaseChatMessageHistory):
-    # ... (no changes in this class)
     def __init__(self, session_id: str, table_name: str):
         self.session_id = session_id
         self.table_name = table_name
@@ -63,8 +55,6 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
     def clear(self) -> None:
         supabase.table(self.table_name).delete().eq("conversation_id", self.session_id).execute()
 
-
-# --- API Request Model and Endpoint ---
 class ChatRequest(BaseModel):
     conversation_id: str
     query: str
@@ -81,18 +71,18 @@ async def chat_with_agent(request: ChatRequest):
                 memory_key="history",
                 chat_memory=message_history,
                 return_messages=True,
+                input_key="input"  # <-- MEMORY FIX
             )
 
             agent_executor = create_agent_executor(memory)
 
-            # Get current time in the correct timezone
             sast_tz = pytz.timezone("Africa/Johannesburg")
             current_time_sast = datetime.datetime.now(sast_tz).strftime('%A, %Y-%m-%d %H:%M:%S %Z')
 
             agent_input = {
                 "input": request.query,
                 "history": memory.chat_memory.messages,
-                "current_time": current_time_sast  # <-- Inject current time here
+                "current_time": current_time_sast
             }
             logger.info(f"--- AGENT INPUT FOR CONVO ID: {request.conversation_id} ---")
             logger.info(agent_input)
