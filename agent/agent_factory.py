@@ -31,9 +31,8 @@ def create_agent_executor(memory):
         ChatGoogleGenerativeAI(model=settings.GENERATIVE_MODEL, temperature=0),
         graph=graph, verbose=False, allow_dangerous_requests=True
     )
-    # Reverting to original tool name for simplicity
     graph_tool = Tool(
-        name="Knowledge Graph Search",
+        name="Knowledge_Graph_Search",
         func=graph_chain.invoke,
         description="Use for specific questions about rules, policies, costs, and fees."
     )
@@ -46,9 +45,8 @@ def create_agent_executor(memory):
         table_name=settings.DB_VECTOR_TABLE,
         query_name=settings.DB_VECTOR_QUERY_NAME
     )
-    # Reverting to original tool name for simplicity
     vector_tool = Tool(
-        name="General Information Search",
+        name="General_Information_Search",
         func=vector_store.as_retriever().invoke,
         description="Use for general, conceptual, or 'how-to' questions."
     )
@@ -72,16 +70,4 @@ def create_agent_executor(memory):
             "tools": rendered_tools,
             "tool_names": tool_names
         }
-    )
-
-    agent = create_react_agent(llm, all_tools, prompt)
-
-    return AgentExecutor(
-        agent=agent,
-        tools=all_tools,
-        memory=memory,
-        verbose=True,
-        # Use the robust, built-in error handler
-        handle_parsing_errors=True,
-        max_iterations=settings.AGENT_MAX_ITERATIONS
     )
