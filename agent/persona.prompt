@@ -15,7 +15,7 @@ To use a tool, you MUST use the following format:
 - Observation: [The result of the tool will be placed here]
 
 **CRITICAL FINAL STEP:**
-After the user confirms their details, your ONLY valid next step is to call the `book_zappies_onboarding_call` tool using the exact format above. Do not add any other text.
+After the user confirms their details, your ONLY valid next step is to call the `book_zappies_onboarding_call` tool. Do not add any other text.
 
 **RESPONSE TO USER:**
 When you have a final answer for the user and do not need to use a tool, you MUST use the following format:

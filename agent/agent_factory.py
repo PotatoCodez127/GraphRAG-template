@@ -10,6 +10,7 @@ from langchain_neo4j import GraphCypherQAChain, Neo4jGraph
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from supabase.client import Client, create_client
+from .output_parser import CustomOutputParser # <-- Import the new parser
 
 def create_agent_executor(memory):
     """
@@ -21,7 +22,7 @@ def create_agent_executor(memory):
         convert_system_message_to_human=True
     )
 
-    # --- Standard Tools (Graph & Vector Search) ---
+    # --- Standard Tools ---
     graph = Neo4jGraph(
         url=settings.NEO4J_URI,
         username=settings.NEO4J_USERNAME,
@@ -59,7 +60,7 @@ def create_agent_executor(memory):
     with open("agent/persona.prompt", "r") as f:
         persona_template = f.read()
 
-    # --- Pre-format the prompt with static tool information ---
+    # --- Pre-format the prompt ---
     rendered_tools = render_text_description(all_tools)
     tool_names = ", ".join([t.name for t in all_tools])
 
@@ -72,7 +73,6 @@ def create_agent_executor(memory):
         }
     )
 
-    # --- MODIFICATION: Add the missing agent creation and return statement ---
     agent = create_react_agent(llm, all_tools, prompt)
 
     return AgentExecutor(
@@ -80,6 +80,8 @@ def create_agent_executor(memory):
         tools=all_tools,
         memory=memory,
         verbose=True,
+        # Use our robust custom parser to fix formatting errors
+        output_parser=CustomOutputParser(),
         handle_parsing_errors=True,
         max_iterations=settings.AGENT_MAX_ITERATIONS
     )
