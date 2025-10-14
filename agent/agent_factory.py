@@ -14,7 +14,6 @@ from langchain_neo4j import GraphCypherQAChain, Neo4jGraph
 from config.settings import settings
 from tools.custom_tools import get_custom_tools
 from supabase.client import Client, create_client
-from .output_parser import CustomOutputParser # <-- Import the parser again
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -36,14 +35,12 @@ def create_agent_executor(memory):
         username=settings.NEO4J_USERNAME,
         password=settings.NEO4J_PASSWORD
     )
-    # --- THIS IS THE FIX ---
     graph_chain = GraphCypherQAChain.from_llm(
         llm,
         graph=graph,
         verbose=True,
-        allow_dangerous_requests=True # <-- Add this line
+        allow_dangerous_requests=True
     )
-    # -----------------------
     graph_tool = Tool(
         name="Knowledge_Graph_Search",
         func=graph_chain.invoke,
@@ -76,15 +73,13 @@ def create_agent_executor(memory):
     # --- Agent and Executor Construction ---
     agent_runnable = create_react_agent(llm, all_tools, prompt)
     
-    output_parser = CustomOutputParser()
-    logger.info(f"✅ Using output parser: {output_parser.__class__.__name__}")
-
     agent_executor = AgentExecutor(
         agent=agent_runnable,
         tools=all_tools,
         memory=memory,
         verbose=True,
-        handle_parsing_errors=True,
+        # A robust error message for the default parser
+        handle_parsing_errors="I made a formatting error. I will correct it and try again.",
         max_iterations=settings.AGENT_MAX_ITERATIONS
     )
     
