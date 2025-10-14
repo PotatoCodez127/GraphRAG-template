@@ -31,23 +31,27 @@ def check_availability(date: str) -> str:
         return f"I'm sorry, but there are no available slots on {date_to_check}. Please try another date."
     return f"Here are the available slots for {date_to_check}: {', '.join(available_slots)}"
 
-def book_zappies_onboarding_call(full_name: str, email: str, company_name: str, start_time: str) -> str:
+def book_zappies_onboarding_call(full_name: str = None, email: str = None, company_name: str = None, start_time: str = None) -> str:
     """Books a 15-minute onboarding call with a potential client to discuss the 'Project Pipeline AI'."""
     logger.info("--- ACTION: Booking Zappies AI Onboarding Call ---")
-    
-    try:
-        # The arguments can sometimes be passed as a single JSON string.
-        # We need to handle this case.
-        if isinstance(full_name, str) and full_name.startswith('{'):
-            data = json.loads(full_name)
-            full_name = data.get('full_name')
-            email = data.get('email')
-            company_name = data.get('company_name')
-            start_time = data.get('start_time')
 
-    except (json.JSONDecodeError, TypeError):
-        pass # If it's not a JSON string, we can assume the arguments are correct.
-        
+    # If the arguments are not passed correctly, they might be in the full_name field as a JSON string.
+    if full_name and not email and not company_name and not start_time:
+        try:
+            # The arguments can sometimes be passed as a single JSON string.
+            if isinstance(full_name, str) and full_name.startswith('{'):
+                data = json.loads(full_name)
+                full_name = data.get('full_name')
+                email = data.get('email')
+                company_name = data.get('company_name')
+                start_time = data.get('start_time')
+        except (json.JSONDecodeError, TypeError):
+             return "There was an error parsing the booking details. Please try again."
+
+
+    if not all([full_name, email, company_name, start_time]):
+        return "Missing required information to book the call. Please provide full name, email, company name, and start time."
+
     logger.info(f"Recipient Name: {full_name}")
     logger.info(f"Recipient Email: {email}")
     logger.info(f"Company: {company_name}")
