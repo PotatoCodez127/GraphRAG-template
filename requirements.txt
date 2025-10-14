@@ -9,7 +9,7 @@ langchain-experimental
 langchain-google-genai
 langchain-neo4j
 langchain-text-splitters
-pypdf  # <-- Add this line for PDF processing
+pypdf
 
 # --- Databases ---
 supabase
