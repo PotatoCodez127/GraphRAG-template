@@ -2,8 +2,9 @@
 import logging
 import json
 from langchain.tools import StructuredTool
-# --- CORRECTED IMPORT ---
-from .action_schemas import BookOnboardingCallArgs, CheckAvailabilityArgs, OnboardingCallDetails
+from langchain_core.tools import Tool
+from pydantic import ValidationError
+from .action_schemas import BookOnboardingCallArgs, CheckAvailabilityArgs
 from .google_calendar import get_available_slots, create_calendar_event
 
 # Set up a basic logger
@@ -13,33 +14,41 @@ logger = logging.getLogger(__name__)
 # --- Tool Functions ---
 
 def check_availability(date: str) -> str:
-    """Checks for available 15-minute slots on a given date."""
+    # This function remains the same, as it already worked correctly.
     logger.info(f"--- ACTION: Checking availability for {date} ---")
-    
     try:
-        # Langchain can sometimes pass the arguments as a JSON string
-        # when there's only one argument.
         data = json.loads(date)
         date_to_check = data.get('date', date)
     except (json.JSONDecodeError, TypeError):
-        # If it's not a JSON string, assume it's the date itself.
         date_to_check = date
-
     available_slots = get_available_slots(date_to_check)
     logger.info(f"Available slots: {available_slots}")
-    logger.info("--- END ACTION ---")
     if not available_slots:
         return f"I'm sorry, but there are no available slots on {date_to_check}. Please try another date."
     return f"Here are the available slots for {date_to_check}: {', '.join(available_slots)}"
 
-def book_zappies_onboarding_call(details: OnboardingCallDetails) -> str:
-    """Books a 15-minute onboarding call with a potential client to discuss the 'Project Pipeline AI'."""
+# --- DEFINITIVE FIX ---
+# This function is now designed to accept a single JSON string.
+def book_zappies_onboarding_call_from_json(json_string: str) -> str:
+    """Books the onboarding call from a JSON string."""
     logger.info("--- ACTION: Booking Zappies AI Onboarding Call ---")
-    
-    full_name = details.full_name
-    email = details.email
-    company_name = details.company_name
-    start_time = details.start_time
+    logger.info(f"Received raw JSON string: {json_string}")
+
+    try:
+        # 1. Manually parse the JSON string.
+        data = json.loads(json_string)
+        # 2. Manually validate the data with our Pydantic schema.
+        validated_args = BookOnboardingCallArgs(**data)
+    except (json.JSONDecodeError, ValidationError) as e:
+        error_message = f"Failed to parse or validate booking details from JSON. Error: {e}"
+        logger.error(error_message, exc_info=True)
+        return f"I'm sorry, there was a problem with the booking details provided. Please try again. Details: {error_message}"
+
+    # 3. Proceed with the validated data.
+    full_name = validated_args.full_name
+    email = validated_args.email
+    company_name = validated_args.company_name
+    start_time = validated_args.start_time
         
     logger.info(f"Recipient Name: {full_name}")
     logger.info(f"Recipient Email: {email}")
@@ -52,13 +61,11 @@ def book_zappies_onboarding_call(details: OnboardingCallDetails) -> str:
 
     try:
         create_calendar_event(start_time, summary, description, attendees)
-        logger.info("--- END ACTION ---")
         return (f"Excellent, {full_name}! I've just sent a calendar invitation for your 'Project Pipeline AI' onboarding call to {email} for {start_time}. "
                 f"Our team is excited to show you how we can help grow {company_name}. ✨")
     except Exception as e:
-        logger.error(f"Error creating calendar event: {e}")
-        return "I'm sorry, but there was an error booking the call. Please try again later."
-
+        logger.error(f"Error creating calendar event: {e}", exc_info=True)
+        return f"I'm sorry, but there was an error booking the call: {str(e)}"
 
 # --- Tool Factory ---
 def get_custom_tools() -> list:
@@ -70,11 +77,16 @@ def get_custom_tools() -> list:
             args_schema=CheckAvailabilityArgs,
             description="Use this tool to check for available time slots on a specific date."
         ),
-        StructuredTool.from_function(
+        # --- DEFINITIVE FIX ---
+        # We now use the basic Tool class and provide a clear description for the AI.
+        Tool(
             name="book_zappies_onboarding_call",
-            func=book_zappies_onboarding_call,
-            args_schema=BookOnboardingCallArgs,
-            description="Use this tool to book a new onboarding call ONLY after you have collected the user's full name, email, company name, and desired start time AND after the user has confirmed these details are correct."
+            func=book_zappies_onboarding_call_from_json,
+            description=(
+                "Use this tool to book a new onboarding call. "
+                "The input must be a single, valid JSON string containing the following keys: "
+                "'full_name', 'email', 'company_name', and 'start_time'."
+            )
         )
     ]
     return tools
