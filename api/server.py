@@ -1,6 +1,6 @@
 # api/server.py
 import asyncio
-# import json # <-- MODIFICATION: This is no longer needed
+import json # <-- MODIFICATION: Import the json library
 from fastapi import FastAPI, HTTPException, Depends, Header, status
 from pydantic import BaseModel
 from supabase.client import Client, create_client
@@ -55,9 +55,30 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
     def clear(self) -> None:
         supabase.table(self.table_name).delete().eq("conversation_id", self.session_id).execute()
 
-
-# --- MODIFICATION: Remove the clean_agent_output function ---
-# The new custom parser in agent_factory.py makes this redundant.
+# --- MODIFICATION: Helper function to sanitize the agent's output ---
+def clean_agent_output(agent_response: dict) -> dict:
+    """
+    Cleans the agent's output to ensure it's valid JSON for the tool.
+    """
+    try:
+        # The agent's raw output is in the 'output' key
+        output_str = agent_response.get("output", "")
+        # Find the start and end of the JSON object
+        start_index = output_str.find('{')
+        end_index = output_str.rfind('}') + 1
+        
+        if start_index != -1 and end_index != 0:
+            # Extract the JSON part of the string
+            json_str = output_str[start_index:end_index]
+            # Parse it to ensure it's valid JSON
+            json.loads(json_str)
+            # Replace the original output with the clean JSON string
+            agent_response["output"] = json_str
+            return agent_response
+    except (json.JSONDecodeError, AttributeError):
+        # If there's an error, just return the original response
+        return agent_response
+    return agent_response
 
 
 # --- API Request Model and Endpoint ---
@@ -82,9 +103,11 @@ async def chat_with_agent(request: ChatRequest):
             )
             agent_executor = create_agent_executor(memory)
             response = await agent_executor.ainvoke({"input": request.query})
+
+            # MODIFICATION: Clean the response before returning it
+            clean_response = clean_agent_output(response)
             
-            # MODIFICATION: No longer need to clean the response here
-            return {"response": response["output"]}
+            return {"response": clean_response["output"]}
         except Exception as e:
             print(f"Error in /chat for conversation_id {request.conversation_id}: {e}")
             raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
