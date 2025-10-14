@@ -1,37 +1,49 @@
 # agent/agent_factory.py
+import logging
+import sys
+
+# LangChain Imports
+from langchain.agents import AgentExecutor, create_react_agent
+from langchain.prompts import PromptTemplate
+from langchain_community.vectorstores import SupabaseVectorStore
+from langchain_core.tools import Tool, render_text_description
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_neo4j import GraphCypherQAChain, Neo4jGraph
+
+# Local Imports
 from config.settings import settings
 from tools.custom_tools import get_custom_tools
-from langchain.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.agents import create_react_agent, AgentExecutor
-from langchain.tools import Tool
-from langchain_core.tools import render_text_description
-from langchain_neo4j import GraphCypherQAChain, Neo4jGraph
-from langchain_community.vectorstores import SupabaseVectorStore
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from supabase.client import Client, create_client
-from .output_parser import CustomOutputParser # <-- Import the new parser
+from .output_parser import CustomOutputParser # <-- Import the parser again
+
+# --- Logging Configuration ---
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger(__name__)
+
 
 def create_agent_executor(memory):
-    """
-    Builds and returns the complete AI agent executor with tools, persona, and memory.
-    """
+    """Builds and returns the complete AI agent executor."""
+    logger.info("🚀 Creating new agent executor instance...")
     llm = ChatGoogleGenerativeAI(
         model=settings.GENERATIVE_MODEL,
         temperature=settings.AGENT_TEMPERATURE,
         convert_system_message_to_human=True
     )
 
-    # --- Standard Tools ---
+    # --- Tool Setup ---
     graph = Neo4jGraph(
         url=settings.NEO4J_URI,
         username=settings.NEO4J_USERNAME,
         password=settings.NEO4J_PASSWORD
     )
+    # --- THIS IS THE FIX ---
     graph_chain = GraphCypherQAChain.from_llm(
-        ChatGoogleGenerativeAI(model=settings.GENERATIVE_MODEL, temperature=0),
-        graph=graph, verbose=False, allow_dangerous_requests=True
+        llm,
+        graph=graph,
+        verbose=True,
+        allow_dangerous_requests=True # <-- Add this line
     )
+    # -----------------------
     graph_tool = Tool(
         name="Knowledge_Graph_Search",
         func=graph_chain.invoke,
@@ -51,37 +63,30 @@ def create_agent_executor(memory):
         func=vector_store.as_retriever().invoke,
         description="Use for general, conceptual, or 'how-to' questions."
     )
-
-    # --- Dynamically Load Custom Tools ---
     custom_tools = get_custom_tools()
     all_tools = [graph_tool, vector_tool] + custom_tools
+    logger.info(f"🛠️  Loaded tools: {[tool.name for tool in all_tools]}")
 
-    # --- Load Persona from File ---
+    # --- Prompt Setup ---
     with open("agent/persona.prompt", "r") as f:
         persona_template = f.read()
 
-    # --- Pre-format the prompt ---
-    rendered_tools = render_text_description(all_tools)
-    tool_names = ", ".join([t.name for t in all_tools])
+    prompt = PromptTemplate.from_template(persona_template)
 
-    prompt = PromptTemplate(
-        template=persona_template,
-        input_variables=["input", "history", "agent_scratchpad"],
-        partial_variables={
-            "tools": rendered_tools,
-            "tool_names": tool_names
-        }
-    )
+    # --- Agent and Executor Construction ---
+    agent_runnable = create_react_agent(llm, all_tools, prompt)
+    
+    output_parser = CustomOutputParser()
+    logger.info(f"✅ Using output parser: {output_parser.__class__.__name__}")
 
-    agent = create_react_agent(llm, all_tools, prompt)
-
-    return AgentExecutor(
-        agent=agent,
+    agent_executor = AgentExecutor(
+        agent=agent_runnable,
         tools=all_tools,
         memory=memory,
         verbose=True,
-        # Use our robust custom parser to fix formatting errors
-        output_parser=CustomOutputParser(),
         handle_parsing_errors=True,
         max_iterations=settings.AGENT_MAX_ITERATIONS
     )
+    
+    logger.info(f"📦 Returning AgentExecutor instance: {type(agent_executor)}")
+    return agent_executor
