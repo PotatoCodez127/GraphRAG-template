@@ -19,9 +19,3 @@ neo4j
 python-dotenv
 pydantic
 tiktoken
-
-# --- Google & Calendar ---
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-pytz
