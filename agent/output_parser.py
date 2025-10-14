@@ -22,11 +22,13 @@ class CustomOutputParser(ReActSingleInputOutputParser):
 
         action_match = re.search(r"Action:\s*([a-zA-Z0-9_]+)", text)
         if not action_match:
+            print("DEBUG: No 'Action:' found. Falling back to default parser.")
             return super().parse(text)
 
         action = action_match.group(1).strip()
         action_input_start = text.find("Action Input:")
         if action_input_start == -1:
+            print("DEBUG: No 'Action Input:' found. Falling back to default parser.")
             return super().parse(text)
 
         action_input_str = text[action_input_start + len("Action Input:"):].strip()
@@ -36,10 +38,8 @@ class CustomOutputParser(ReActSingleInputOutputParser):
         # Regex to find the JSON block. It looks for the first '{' and the last '}'
         json_match = re.search(r"\{.*\}", action_input_str, re.DOTALL)
         if not json_match:
-            print("DEBUG: No JSON object found in Action Input. Falling back to default parser.")
-            # If no JSON is found, we can assume the input is a simple string.
+            print("DEBUG: No JSON object found in Action Input. Assuming it's a string.")
             return AgentAction(tool=action, tool_input=action_input_str, log=text)
-
 
         try:
             # Extract and parse only the JSON part
@@ -47,7 +47,7 @@ class CustomOutputParser(ReActSingleInputOutputParser):
             print(f"DEBUG: Extracted JSON string: '{json_str}'")
             tool_input = json.loads(json_str)
             print(f"DEBUG: Successfully parsed JSON: {tool_input}")
-
+            
             print("\n--- PARSER OUTPUT: SUCCESS ---\n")
             return AgentAction(tool=action, tool_input=tool_input, log=text)
         except json.JSONDecodeError as e:
