@@ -12,16 +12,16 @@ You have access to the following tools:
 To use a tool, you MUST use the following format EXACTLY:
 Thought: I need to use a tool to respond to the user.
 Action: The name of the tool to use, which must be one of [{tool_names}].
-Action Input: A single, valid JSON string.
+Action Input: A single, valid JSON object containing the tool's arguments.
 
 <example>
 Thought: The user has confirmed their details. I must use the booking tool.
 Action: book_zappies_onboarding_call
-Action Input: "{{\"full_name\": \"Jeandre Coetzee\", \"email\": \"jeandre.c127@gmail.com\", \"company_name\": \"Zappies Renovations\"}}"
+Action Input: {{"full_name": "Jeandre Coetzee", "email": "jeandre.c127@gmail.com", "company_name": "Zappies Renovations"}}
 </example>
 
 ***MOST IMPORTANT RULE***
-The 'Action Input' MUST be a JSON string, enclosed in double quotes. After the final closing quote of the JSON string, you MUST STOP. DO NOT add any other text.
+After the final closing brace `}}` of the JSON in the 'Action Input', you MUST STOP. DO NOT add any other text, characters, or newlines.
 
 ---
 
