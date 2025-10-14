@@ -1,6 +1,5 @@
 # api/server.py
 import asyncio
-# import json # <-- MODIFICATION: This is no longer needed
 from fastapi import FastAPI, HTTPException, Depends, Header, status
 from pydantic import BaseModel
 from supabase.client import Client, create_client
@@ -55,11 +54,6 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
     def clear(self) -> None:
         supabase.table(self.table_name).delete().eq("conversation_id", self.session_id).execute()
 
-
-# --- MODIFICATION: Remove the clean_agent_output function ---
-# The new custom parser in agent_factory.py makes this redundant.
-
-
 # --- API Request Model and Endpoint ---
 class ChatRequest(BaseModel):
     conversation_id: str
@@ -83,7 +77,6 @@ async def chat_with_agent(request: ChatRequest):
             agent_executor = create_agent_executor(memory)
             response = await agent_executor.ainvoke({"input": request.query})
             
-            # MODIFICATION: No longer need to clean the response here
             return {"response": response["output"]}
         except Exception as e:
             print(f"Error in /chat for conversation_id {request.conversation_id}: {e}")
