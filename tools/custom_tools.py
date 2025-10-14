@@ -9,9 +9,10 @@ logger = logging.getLogger(__name__)
 
 # --- Tool Functions for Zappies AI's Internal Sales Bot ---
 
-# --- THIS IS THE FIX ---
-# The function signature now has separate arguments for each field,
-# which matches how StructuredTool expects to work with the Pydantic schema.
+# --- THIS IS THE FINAL FIX ---
+# The function signature now accepts individual arguments (full_name, email, company_name).
+# This directly matches the fields in the BookOnboardingCallArgs schema,
+# which is the correct way to use a StructuredTool and will resolve the validation error.
 def book_zappies_onboarding_call(full_name: str, email: str, company_name: str) -> str:
     """Books a 15-minute onboarding call with a potential client to discuss the 'Project Pipeline AI'."""
     logger.info("--- ACTION: Booking Zappies AI Onboarding Call ---")
@@ -22,7 +23,7 @@ def book_zappies_onboarding_call(full_name: str, email: str, company_name: str) 
     
     return (f"Excellent, {full_name}! I've just sent a calendar invitation for your 'Project Pipeline AI' onboarding call to {email}. "
             f"Our team is excited to show you how we can help grow {company_name}. ✨")
-# -----------------------
+# -----------------------------
 
 # --- Tool Factory ---
 def get_custom_tools() -> list:
