@@ -2,7 +2,6 @@
 import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-# --- THIS IS THE FIX ---
 from googleapiclient import errors
 from config.settings import settings
 import pytz
@@ -19,6 +18,7 @@ def get_calendar_service():
     service = build('calendar', 'v3', credentials=creds)
     return service
 
+# ... (get_available_slots remains the same) ...
 def get_available_slots(date: str) -> list[str]:
     service = get_calendar_service()
     sast_tz = pytz.timezone("Africa/Johannesburg")
@@ -47,20 +47,28 @@ def get_available_slots(date: str) -> list[str]:
         current_time += datetime.timedelta(minutes=60)
     return available_slots
 
+
+# --- THIS FUNCTION IS UPDATED ---
 def find_event_by_details(email: str, original_start_time: str) -> str | None:
+    """Finds a Google Calendar event ID using a reliable private property search."""
     service = get_calendar_service()
     sast_tz = pytz.timezone("Africa/Johannesburg")
     start_time = parse(original_start_time)
     if start_time.tzinfo is None:
         start_time = sast_tz.localize(start_time)
+        
     events_result = service.events().list(
-        calendarId=CALENDAR_ID, timeMin=start_time.isoformat(),
+        calendarId=CALENDAR_ID,
+        timeMin=start_time.isoformat(),
         timeMax=(start_time + datetime.timedelta(minutes=1)).isoformat(),
-        q=email, singleEvents=True
+        # Use the more reliable private property search instead of 'q'
+        privateExtendedProperty=f"lead_email={email}",
+        singleEvents=True
     ).execute()
     events = events_result.get('items', [])
     return events[0]['id'] if events else None
 
+# ... (update_calendar_event and delete_calendar_event remain the same) ...
 def update_calendar_event(event_id: str, new_start_time: str) -> dict:
     service = get_calendar_service()
     sast_tz = pytz.timezone("Africa/Johannesburg")
@@ -86,7 +94,9 @@ def delete_calendar_event(event_id: str) -> None:
         else:
             raise
 
+# --- THIS FUNCTION IS UPDATED ---
 def create_calendar_event(start_time: str, summary: str, description: str, attendees: list[str]) -> dict:
+    """Creates a new event and tags it with a searchable private property."""
     service = get_calendar_service()
     sast_tz = pytz.timezone("Africa/Johannesburg")
     start = parse(start_time)
@@ -98,11 +108,25 @@ def create_calendar_event(start_time: str, summary: str, description: str, atten
     if start.date() == now_sast.date():
         raise ValueError("Cannot book a same-day appointment. Please book for the next business day or later.")
     end = start + datetime.timedelta(minutes=60)
+
+    # Add the user's email to the description for human readability
+    full_description = description
+    lead_email = attendees[0] if attendees else 'N/A'
+    if lead_email != 'N/A':
+        full_description += f"\n\n---\nLead Contact: {lead_email}"
+
     event = {
-        'summary': summary, 'description': description,
+        'summary': summary, 
+        'description': full_description,
         'start': {'dateTime': start.isoformat(), 'timeZone': 'Africa/Johannesburg'},
         'end': {'dateTime': end.isoformat(), 'timeZone': 'Africa/Johannesburg'},
-        'reminders': {'useDefault': False, 'overrides': [{'method': 'email', 'minutes': 24 * 60}, {'method': 'popup', 'minutes': 10}]}
+        'reminders': {'useDefault': False, 'overrides': [{'method': 'email', 'minutes': 24 * 60}, {'method': 'popup', 'minutes': 10}]},
+        # Add a private, searchable property to tag the event with the lead's email
+        'extendedProperties': {
+            'private': {
+                'lead_email': lead_email
+            }
+        }
     }
     created_event = service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
     return created_event
