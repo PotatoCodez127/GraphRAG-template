@@ -2,7 +2,8 @@
 import logging
 import json
 from langchain.tools import StructuredTool
-from .action_schemas import BookOnboardingCallArgs, CheckAvailabilityArgs
+# --- CORRECTED IMPORT ---
+from .action_schemas import BookOnboardingCallArgs, CheckAvailabilityArgs, OnboardingCallDetails
 from .google_calendar import get_available_slots, create_calendar_event
 
 # Set up a basic logger

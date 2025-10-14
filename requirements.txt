@@ -19,6 +19,7 @@ neo4j
 python-dotenv
 pydantic
 tiktoken
+python-dateutil
 
 # --- Google Calendar API ---
 google-api-python-client

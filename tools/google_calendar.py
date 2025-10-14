@@ -4,6 +4,8 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from config.settings import settings
 import pytz
+# --- CORRECTED IMPORT ---
+from dateutil.parser import parse
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 SERVICE_ACCOUNT_FILE = settings.SERVICE_ACCOUNT_FILE
