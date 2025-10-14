@@ -71,3 +71,15 @@ def create_agent_executor(memory):
             "tool_names": tool_names
         }
     )
+
+    # --- MODIFICATION: Add the missing agent creation and return statement ---
+    agent = create_react_agent(llm, all_tools, prompt)
+
+    return AgentExecutor(
+        agent=agent,
+        tools=all_tools,
+        memory=memory,
+        verbose=True,
+        handle_parsing_errors=True,
+        max_iterations=settings.AGENT_MAX_ITERATIONS
+    )
