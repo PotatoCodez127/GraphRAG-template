@@ -3,9 +3,9 @@
 import os
 import re
 import hashlib
-import sys  # <-- Import the sys module
+import sys
 from dotenv import load_dotenv
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader, UnstructuredMarkdownLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_experimental.graph_transformers import LLMGraphTransformer
@@ -17,7 +17,7 @@ from langchain_core.documents import Document
 # Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config.settings import settings  # <-- This will now work
+from config.settings import settings
 
 # Load environment variables from the root .env file
 load_dotenv()
@@ -80,7 +80,7 @@ def main():
     current_files = {
         os.path.join(source_path, f): calculate_checksum(os.path.join(source_path, f))
         for f in os.listdir(source_path)
-        if os.path.isfile(os.path.join(source_path, f)) and f.endswith(".pdf")
+        if os.path.isfile(os.path.join(source_path, f)) and (f.endswith(".pdf") or f.endswith(".md"))
     }
 
     files_to_add = {f for f in current_files if f not in processed_log}
@@ -112,14 +112,17 @@ def main():
         for file_path in files_to_process:
             print(f"  - Processing: {file_path}")
             
-            # Use PyPDFLoader for PDF files
-            loader = PyPDFLoader(file_path)
+            if file_path.endswith(".pdf"):
+                loader = PyPDFLoader(file_path)
+            elif file_path.endswith(".md"):
+                loader = UnstructuredMarkdownLoader(file_path)
+            
             documents = loader.load()
 
             # Use RecursiveCharacterTextSplitter for chunking
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=2000,  # Adjust chunk size as needed
-                chunk_overlap=200   # Adjust overlap as needed
+                chunk_size=2000,
+                chunk_overlap=200
             )
             chunks = text_splitter.split_documents(documents)
 
