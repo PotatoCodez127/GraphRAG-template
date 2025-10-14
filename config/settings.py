@@ -9,6 +9,10 @@ class Settings:
     """
     Centralized application settings, loaded from environment variables.
     """
+    # --- Google Calendar ---
+    GOOGLE_CALENDAR_ID: str = os.getenv("GOOGLE_CALENDAR_ID", "primary")
+    SERVICE_ACCOUNT_FILE: str = "service_account.json"
+
     # --- API and Security ---
     API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "DEFAULT_SECRET_KEY")
     API_TITLE: str = "Zappies-AI Bot API"

@@ -3,3 +3,7 @@
 __pycache__/
 *.pyc
 instance/
+service_account.json
+.DS_Store
+.vscode/
+.idea/
