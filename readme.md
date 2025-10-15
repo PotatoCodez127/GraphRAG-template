@@ -180,7 +180,6 @@ create table documents (
 );
 
 -- Create a function to perform similarity searches on your documents
-DROP TABLE IF EXISTS match_documents
 create or replace function match_documents (
   query_embedding vector(768),
   match_count int,
