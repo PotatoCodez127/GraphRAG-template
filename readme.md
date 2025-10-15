@@ -180,6 +180,7 @@ create table documents (
 );
 
 -- Create a function to perform similarity searches on your documents
+-- Create a function to perform similarity searches on your documents
 create or replace function match_documents (
   query_embedding vector(768),
   match_count int,
@@ -195,9 +196,9 @@ as $$
 begin
   return query
   select
-    id,
-    content,
-    metadata,
+    documents.id, -- This is the fix: specifying the table for the 'id' column
+    documents.content,
+    documents.metadata,
     1 - (documents.embedding <=> query_embedding) as similarity
   from documents
   where metadata @> filter

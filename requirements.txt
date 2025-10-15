@@ -2,7 +2,7 @@
 fastapi
 uvicorn
 
-# --- AI & LangChain ---
+# --- AI & LangChain (Modern, compatible versions) ---
 langchain
 langchain-community
 langchain-experimental

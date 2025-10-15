@@ -9,9 +9,8 @@ from supabase.client import Client, create_client
 from config.settings import settings
 from agent.agent_factory import create_agent_executor
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import BaseChatMessageHistory
-from langchain.schema.messages import BaseMessage, messages_from_dict, messages_to_dict
-
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.messages import BaseMessage, messages_from_dict, messages_to_dict
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
