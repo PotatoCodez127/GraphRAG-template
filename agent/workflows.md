@@ -37,9 +37,13 @@ This document outlines the primary conversational paths for the Zappies AI assis
     * *(User provides their email)*
     * **AI**: "Perfect. And your company name?"
     * *(User provides their company name)*
+    * **AI**: "Got it. So I can prepare for our chat, what's the main goal you're hoping to achieve with a system like this?"
+    * *(User provides their goal)*
+    * **AI**: "That's a great goal. And to make sure our solution is the right fit, what is your approximate monthly budget for a tool that solves this problem?"
+    * *(User provides their budget)*
     * **AI**: "Got it. I have the booking for **[Name]** from **[Company Name]** at **[Email]**. All correct?"
     * *(User Responds with a final affirmative, like "Yes, that's correct")*
-    * **(IMMEDIATE ACTION: Use the `Book Zappies Onboarding Call` tool. Your response to the user will be the output from the tool itself.)**
+    * **(IMMEDIATE ACTION: Use the `book_zappies_onboarding_call` tool. Your response to the user will be the output from the tool itself.)**
 ---
 
 ### Workflow 2: Handling Objections & Questions (e.g., "How much does it cost?")

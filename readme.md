@@ -235,6 +235,23 @@ CREATE TABLE public.conversation_history (
 
 -- 3. Enable Row Level Security (RLS) - Best Practice
 -- ALTER TABLE public.conversation_history ENABLE ROW LEVEL SECURITY;
+
+-- Create a table to store and manage all booked appointments
+CREATE TABLE public.meetings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    google_calendar_event_id TEXT,
+    full_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    company_name TEXT,
+    start_time TIMESTAMPTZ NOT NULL,
+    goal TEXT,
+    monthly_budget REAL,
+    status TEXT NOT NULL DEFAULT 'booked', -- e.g., 'booked', 'confirmed', 'cancelled'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Optional: Create an index on the email and start_time for faster lookups
+CREATE INDEX idx_meetings_email_start_time ON public.meetings (email, start_time);
 ```
 
 ## ☁️ Deployment

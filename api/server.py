@@ -82,7 +82,7 @@ async def chat_with_agent(request: ChatRequest):
 
             agent_input = {
                 "input": request.query,
-                "history": memory.chat_memory.messages,
+                # "history": memory.chat_memory.messages,
                 "current_time": current_time_sast
             }
             logger.info(f"--- AGENT INPUT FOR CONVO ID: {request.conversation_id} ---")
@@ -90,8 +90,13 @@ async def chat_with_agent(request: ChatRequest):
             logger.info("----------------------------------------------------")
             
             response = await agent_executor.ainvoke(agent_input)
-            
-            return {"response": response.get("output")}
+
+            agent_output = response.get("output")
+            if not agent_output or not agent_output.strip():
+                logger.warning(f"Agent for convo ID {request.conversation_id} generated an empty response. Sending a default message.")
+                agent_output = "I'm sorry, I seem to have lost my train of thought. Could you please tell me a little more about what you're looking for?"
+
+            return {"response": agent_output}
         except Exception as e:
             logger.error(f"Error in /chat for conversation_id {request.conversation_id}: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")

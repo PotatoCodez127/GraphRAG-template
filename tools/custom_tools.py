@@ -1,4 +1,6 @@
 # tools/custom_tools.py
+from config.settings import settings
+from supabase.client import Client, create_client
 import logging
 import json
 from langchain.tools import StructuredTool
@@ -36,19 +38,57 @@ def check_availability(date: str) -> str:
     return f"Here are the available slots for {date_to_check}: {', '.join(available_slots)}"
 
 def book_zappies_onboarding_call_from_json(json_string: str) -> str:
-    # This function remains the same
     logger.info(f"--- ACTION: Booking Zappies AI Onboarding Call ---")
     try:
         data = json.loads(json_string)
         validated_args = BookOnboardingCallArgs(**data)
     except (json.JSONDecodeError, ValidationError) as e:
         return f"I'm sorry, there was a problem with the booking details. Error: {e}"
-    full_name, email, company_name, start_time = validated_args.full_name, validated_args.email, validated_args.company_name, validated_args.start_time
-    summary = f"Onboard Call with {company_name} | Whatsapp"
-    description = f"Onboarding call with {full_name} from {company_name} to discuss the 'Project Pipeline AI'."
+
+    # --- ADD THIS BUDGET CHECK ---
+    if validated_args.monthly_budget < 8000:
+        return (
+            "Thank you for sharing that. Based on the budget you provided, it seems like our 'Project Pipeline AI' "
+            "might not be the right fit for your needs at this moment. Our solution is designed for businesses with a "
+            "higher budget for this kind of automation. I appreciate your time and honesty!"
+        )
+
+    # Deconstruct the validated arguments
+    full_name = validated_args.full_name
+    email = validated_args.email
+    company_name = validated_args.company_name
+    start_time = validated_args.start_time
+    goal = validated_args.goal
+    monthly_budget = validated_args.monthly_budget
+    
+    summary = f"Onboard Call with {company_name} | Zappies AI"
+    description = (
+        f"Onboarding call with {full_name} from {company_name} to discuss the 'Project Pipeline AI'.\n\n"
+        f"Stated Goal: {goal}\n"
+        f"Stated Budget: R{monthly_budget}/month"
+    )
+    
     try:
-        create_calendar_event(start_time, summary, description, [email])
-        return (f"Excellent, {full_name}! I've booked your 'Project Pipeline AI' onboarding call for {start_time}. Our team is excited to connect. ✨")
+        # Create the event in Google Calendar
+        created_event = create_calendar_event(start_time, summary, description, [email])
+        
+        # --- Store the meeting in Supabase ---
+        supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+        supabase.table("meetings").insert({
+            "google_calendar_event_id": created_event.get('id'),
+            "full_name": full_name,
+            "email": email,
+            "company_name": company_name,
+            "start_time": start_time,
+            "goal": goal,
+            "monthly_budget": monthly_budget,
+            "status": "booked"
+        }).execute()
+
+        # We will add the email sending function here in the next step.
+
+        return (f"Excellent, {full_name}! I've booked your 'Project Pipeline AI' onboarding call for {start_time}. "
+                "Our team is excited to connect. You'll receive an email shortly to confirm your spot. ✨")
     except (ValueError, Exception) as e:
         logger.error(f"Booking/validation error: {e}", exc_info=True)
         return f"I'm sorry, I cannot book that appointment. {e}"
@@ -100,7 +140,6 @@ def reschedule_appointment_from_json(json_string: str) -> str:
         logger.error(f"Error rescheduling event: {e}", exc_info=True)
         return f"Sorry, there was an error rescheduling your appointment: {str(e)}"
 
-# --- THIS IS THE CRITICAL FIX ---
 def get_custom_tools() -> list:
     """Returns a list of all custom tools available to the agent."""
     tools = [
@@ -114,8 +153,8 @@ def get_custom_tools() -> list:
             name="book_zappies_onboarding_call",
             func=book_zappies_onboarding_call_from_json,
             description=(
-                "Use to book a NEW onboarding call. The input must be a single, valid JSON string with keys: "
-                "'full_name', 'email', 'company_name', and 'start_time'."
+                "Use to book a NEW onboarding call after you have collected all required information. The input must be a single, "
+                "valid JSON string with keys: 'full_name', 'email', 'company_name', 'start_time', 'goal', and 'monthly_budget'."
             )
         ),
         Tool(
