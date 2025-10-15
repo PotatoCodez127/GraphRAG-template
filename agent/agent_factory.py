@@ -55,11 +55,20 @@ def create_agent_executor(memory):
         table_name=settings.DB_VECTOR_TABLE,
         query_name=settings.DB_VECTOR_QUERY_NAME
     )
+    
+    # --- THIS IS THE FIX ---
+    # We create a simple function to wrap the vector store's similarity search.
+    # This avoids the part of the LangChain retriever that is causing the error.
+    def run_vector_search(query: str):
+        """Runs a similarity search on the vector store and returns the results."""
+        return vector_store.similarity_search(query)
+
     vector_tool = Tool(
         name="General_Information_Search",
-        func=vector_store.as_retriever().invoke,
+        func=run_vector_search, # Use our new, safe function
         description="Use for general, conceptual, or 'how-to' questions."
     )
+    
     custom_tools = get_custom_tools()
     all_tools = [graph_tool, vector_tool] + custom_tools
     logger.info(f"🛠️  Loaded tools: {[tool.name for tool in all_tools]}")

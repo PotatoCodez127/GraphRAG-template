@@ -25,7 +25,7 @@ class Settings:
     GENERATIVE_MODEL: str = "gemini-2.5-flash"
     EMBEDDING_MODEL: str = "models/embedding-001"
     AGENT_TEMPERATURE: float = 0.1
-    AGENT_MAX_ITERATIONS: int = 7
+    AGENT_MAX_ITERATIONS: int = 10
 
     # --- Vector Database (Supabase) ---
     SUPABASE_URL: str = os.getenv("SUPABASE_URL")
