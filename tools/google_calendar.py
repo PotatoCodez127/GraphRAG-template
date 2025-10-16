@@ -101,10 +101,16 @@ def create_calendar_event(start_time: str, summary: str, description: str, atten
     sast_tz = pytz.timezone("Africa/Johannesburg")
 
     # --- THIS IS THE FIX ---
-    # Parse the incoming time string, which is naive (no timezone)
-    naive_start_time = parse(start_time)
-    # Localize the naive time, explicitly telling it that it represents a time in SAST
-    start = sast_tz.localize(naive_start_time)
+    # Parse the incoming time string
+    parsed_start_time = parse(start_time)
+
+    # Check if the datetime object is already timezone-aware
+    if parsed_start_time.tzinfo is not None:
+        # If it is, convert it to the correct local timezone (SAST)
+        start = parsed_start_time.astimezone(sast_tz)
+    else:
+        # If it's naive, localize it as before
+        start = sast_tz.localize(parsed_start_time)
 
     now_sast = datetime.datetime.now(sast_tz)
     if start < now_sast:
@@ -112,7 +118,7 @@ def create_calendar_event(start_time: str, summary: str, description: str, atten
     if start.date() == now_sast.date():
         raise ValueError("Cannot book a same-day appointment. Please book for the next business day or later.")
     
-    # The end time will correctly inherit the timezone from the start time
+    start -= datetime.timedelta(minutes=120)
     end = start + datetime.timedelta(minutes=60)
 
     full_description = description
@@ -123,8 +129,6 @@ def create_calendar_event(start_time: str, summary: str, description: str, atten
     event = {
         'summary': summary, 
         'description': full_description,
-        # The .isoformat() method on a timezone-aware object now includes the offset 
-        # (e.g., +02:00), which is exactly what the API needs.
         'start': {'dateTime': start.isoformat(), 'timeZone': 'Africa/Johannesburg'},
         'end': {'dateTime': end.isoformat(), 'timeZone': 'Africa/Johannesburg'},
         'reminders': {'useDefault': False, 'overrides': [{'method': 'email', 'minutes': 24 * 60}, {'method': 'popup', 'minutes': 10}]},
