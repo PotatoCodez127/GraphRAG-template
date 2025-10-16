@@ -11,8 +11,8 @@ from agent.agent_factory import create_agent_executor
 from langchain.memory import ConversationBufferMemory
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict, messages_to_dict
-# --- NEW IMPORT ---
 from collections import defaultdict
+from fastapi.responses import HTMLResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -108,3 +108,24 @@ async def chat_with_agent(request: ChatRequest):
             except Exception as e:
                 logger.error(f"Error in /chat for conversation_id {request.conversation_id}: {e}", exc_info=True)
                 raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+@app.get("/confirm-meeting/{meeting_id}", response_class=HTMLResponse)
+async def confirm_meeting(meeting_id: str):
+    """Endpoint to confirm a meeting from an email link."""
+    try:
+        response = supabase.table("meetings").select("id, status").eq("id", meeting_id).single().execute()
+        
+        if not response.data:
+            return "<h1>Meeting Not Found</h1><p>This confirmation link is invalid or has expired.</p>"
+        
+        if response.data['status'] == 'confirmed':
+            return "<h1>Meeting Already Confirmed</h1><p>Your spot was already secured. We look forward to seeing you!</p>"
+
+        supabase.table("meetings").update({"status": "confirmed"}).eq("id", meeting_id).execute()
+        
+        logger.info(f"Meeting {meeting_id} confirmed successfully.")
+        return "<h1>Thank You!</h1><p>Your meeting has been successfully confirmed. We've saved your spot!</p>"
+
+    except Exception as e:
+        logger.error(f"Error confirming meeting {meeting_id}: {e}", exc_info=True)
+        return "<h1>Error</h1><p>Sorry, something went wrong while confirming your meeting. Please try again later.</p>"

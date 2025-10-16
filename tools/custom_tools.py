@@ -19,6 +19,7 @@ from .google_calendar import (
     update_calendar_event,
     delete_calendar_event
 )
+from .email_sender import send_confirmation_email
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -69,12 +70,11 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
     )
     
     try:
-        # Create the event in Google Calendar
         created_event = create_calendar_event(start_time, summary, description, [email])
         
-        # --- Store the meeting in Supabase ---
         supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
-        supabase.table("meetings").insert({
+        
+        response = supabase.table("meetings").insert({
             "google_calendar_event_id": created_event.get('id'),
             "full_name": full_name,
             "email": email,
@@ -82,13 +82,20 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
             "start_time": start_time,
             "goal": goal,
             "monthly_budget": monthly_budget,
-            "status": "booked"
+            "status": "pending_confirmation"
         }).execute()
+        
+        meeting_id = response.data[0]['id']
 
-        # We will add the email sending function here in the next step.
+        send_confirmation_email(
+            recipient_email=email,
+            full_name=full_name,
+            start_time=start_time,
+            meeting_id=meeting_id
+        )
 
-        return (f"Excellent, {full_name}! I've booked your 'Project Pipeline AI' onboarding call for {start_time}. "
-                "Our team is excited to connect. You'll receive an email shortly to confirm your spot. ✨")
+        return (f"Excellent, {full_name}! I've provisionally booked your onboarding call. "
+                "I've just sent you an email to confirm your spot. Please click the link in the email to finalize everything. ✨")
     except (ValueError, Exception) as e:
         logger.error(f"Booking/validation error: {e}", exc_info=True)
         return f"I'm sorry, I cannot book that appointment. {e}"

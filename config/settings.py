@@ -9,6 +9,13 @@ class Settings:
     """
     Centralized application settings, loaded from environment variables.
     """
+    # --- Email Configuration ---
+    SENDER_EMAIL: str = os.getenv("SENDER_EMAIL")
+    SENDER_APP_PASSWORD: str = os.getenv("SENDER_APP_PASSWORD")
+
+    # The public base URL of your API for confirmation links
+    API_BASE_URL: str = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
+
     # --- Google Calendar ---
     GOOGLE_CALENDAR_ID: str = os.getenv("GOOGLE_CALENDAR_ID", "primary")
     SERVICE_ACCOUNT_FILE: str = "service_account.json"
