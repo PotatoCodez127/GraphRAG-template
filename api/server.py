@@ -48,18 +48,19 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
 
     @property
     def messages(self):
-        response = supabase.table(self.table_name).select("history").eq("conversation_id", self.session_id).single().execute()
-        return messages_from_dict(response.data['history']) if response.data and response.data.get('history') else []
+        """Retrieve messages from Supabase, handling empty results."""
+        # --- THIS IS THE FIX ---
+        # Removed .single() to allow for zero rows on new conversations
+        response = supabase.table(self.table_name).select("history").eq("conversation_id", self.session_id).execute()
+        return messages_from_dict(response.data[0]['history']) if response.data and response.data[0].get('history') else []
 
     def add_messages(self, messages: list[BaseMessage]) -> None:
         """Save messages to Supabase, injecting tool calls into the AI message."""
         current_history_dicts = messages_to_dict(self.messages)
         
-        # This is the new logic to handle tool calls
         new_history_dicts = []
         for message in messages:
             message_dict = messages_to_dict([message])[0]
-            # If it's an AI message, check if it has tool calls to add
             if isinstance(message, AIMessage) and hasattr(message, 'tool_calls'):
                 message_dict['data']['tool_calls'] = message.tool_calls
             new_history_dicts.append(message_dict)
@@ -85,9 +86,11 @@ async def chat_with_agent(request: ChatRequest):
 
     async with lock:
         try:
-            status_response = supabase.table("conversation_history").select("status").eq("conversation_id", request.conversation_id).single().execute()
+            # --- THIS IS THE FIX ---
+            # Removed .single() from the gatekeeper logic
+            status_response = supabase.table("conversation_history").select("status").eq("conversation_id", request.conversation_id).execute()
             
-            if status_response.data and status_response.data.get('status') == 'handover':
+            if status_response.data and status_response.data[0].get('status') == 'handover':
                 logger.info(f"Conversation {request.conversation_id} is in handover. Bypassing agent.")
                 message_history = SupabaseChatMessageHistory(session_id=request.conversation_id, table_name=settings.DB_CONVERSATION_HISTORY_TABLE)
                 message_history.add_messages([HumanMessage(content=request.query)])
@@ -127,14 +130,11 @@ async def chat_with_agent(request: ChatRequest):
 
                 agent_output = response.get("output")
                 
-                # --- INJECT TOOL CALLS BEFORE SAVING ---
                 tool_calls = tool_callback.tool_calls
                 ai_message = AIMessage(content=agent_output)
                 if tool_calls:
-                    # Attach the captured tool calls to the AIMessage object
                     ai_message.tool_calls = tool_calls
 
-                # Now, save the messages with the enriched AI message
                 message_history.add_messages([
                     HumanMessage(content=request.query),
                     ai_message

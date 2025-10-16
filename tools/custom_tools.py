@@ -20,10 +20,8 @@ from .google_calendar import (
     update_calendar_event,
     delete_calendar_event
 )
-from .email_sender import (
-    send_confirmation_email,
-    send_handover_email
-)
+# --- THIS IS THE FIX ---
+from .email_sender import send_confirmation_email, send_handover_email
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -103,8 +101,6 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
         logger.error(f"Booking/validation error: {e}", exc_info=True)
         return f"I'm sorry, I cannot book that appointment. {e}"
 
-# tools/custom_tools.py
-
 def request_human_handover(json_string: str) -> str:
     """Handles the human handover process."""
     logger.info(f"--- ACTION: Requesting Human Handover ---")
@@ -117,8 +113,7 @@ def request_human_handover(json_string: str) -> str:
     try:
         supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
 
-        # --- THIS IS THE FIX ---
-        # 1. Fetch the conversation history without using .single()
+        # 1. Fetch the conversation history
         response = supabase.table("conversation_history").select("history").eq("conversation_id", conversation_id).execute()
         
         history_messages = []
@@ -142,6 +137,7 @@ def request_human_handover(json_string: str) -> str:
     except Exception as e:
         logger.error(f"Error during handover for convo {conversation_id}: {e}", exc_info=True)
         return "Sorry, I encountered an error while trying to reach a human. Please try again."
+
 
 def cancel_appointment_from_json(json_string: str) -> str:
     """Cancels an appointment from a JSON string."""
@@ -231,4 +227,3 @@ def get_custom_tools() -> list:
         )
     ]
     return tools
-
