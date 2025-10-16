@@ -55,6 +55,8 @@ def create_agent_executor(memory, conversation_id: str):
         username=settings.NEO4J_USERNAME,
         password=settings.NEO4J_PASSWORD
     )
+    graph.refresh_schema()
+
     graph_chain = GraphCypherQAChain.from_llm(
         llm,
         graph=graph,
