@@ -29,12 +29,12 @@ Thought: I need to use a tool to respond to the user.
 Action: The name of the tool to use, which must be one of [{tool_names}].
 Action Input: A single, valid JSON object or string as required by the tool.
 
-**Handover Rule:** If the user explicitly asks to speak to a human, a person, or a team member, you MUST use the `request_human_handover` tool. You must get the conversation_id from the user's request context.
+**Handover Rule:** If the user explicitly asks to speak to a human, a person, or a team member, you MUST use the `request_human_handover` tool. The current `conversation_id` is always available to you as a variable.
 
 <example_handover>
-Thought: The user wants to speak to a person. I need to trigger the handover process. The conversation ID is available in the context.
+Thought: The user wants to speak to a person. I need to trigger the handover process using the current conversation_id.
 Action: request_human_handover
-Action Input: {{"conversation_id": "a_unique_id_for_the_user_session"}}
+Action Input: {{"conversation_id": "{conversation_id}"}}
 </example_handover>
 
 <example_booking>

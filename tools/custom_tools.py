@@ -100,12 +100,13 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
         logger.error(f"Booking/validation error: {e}", exc_info=True)
         return f"I'm sorry, I cannot book that appointment. {e}"
 
+# tools/custom_tools.py
+
 def request_human_handover(json_string: str) -> str:
     """Handles the human handover process."""
     logger.info(f"--- ACTION: Requesting Human Handover ---")
     try:
         data = json.loads(json_string)
-        # We only need the conversation_id, which the agent already knows
         conversation_id = data["conversation_id"]
     except (json.JSONDecodeError, KeyError) as e:
         return f"Sorry, there was an internal error processing the handover request. Error: {e}"
@@ -113,20 +114,25 @@ def request_human_handover(json_string: str) -> str:
     try:
         supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
 
-        # 1. Fetch the conversation history
-        response = supabase.table("conversation_history").select("history").eq("conversation_id", conversation_id).single().execute()
+        # --- THIS IS THE FIX ---
+        # 1. Fetch the conversation history without using .single()
+        response = supabase.table("conversation_history").select("history").eq("conversation_id", conversation_id).execute()
         
-        if not response.data or not response.data.get('history'):
-            return "Could not find the conversation history to perform the handover."
-
-        from langchain_core.messages import messages_from_dict
-        history_messages = messages_from_dict(response.data['history'])
+        history_messages = []
+        if response.data and response.data[0].get('history'):
+            from langchain_core.messages import messages_from_dict
+            history_messages = messages_from_dict(response.data[0]['history'])
+        else:
+            logger.warning(f"No previous history found for conversation {conversation_id}. Handover will proceed with an empty history.")
 
         # 2. Send the notification email
         send_handover_email(conversation_id, history_messages)
 
-        # 3. Update the conversation status in the database
-        supabase.table("conversation_history").update({"status": "handover"}).eq("conversation_id", conversation_id).execute()
+        # 3. Update the conversation status. Use upsert to create the record if it doesn't exist.
+        supabase.table("conversation_history").upsert({
+            "conversation_id": conversation_id,
+            "status": "handover"
+        }).execute()
         
         return "Okay, I've notified a member of our team. They will review our conversation and get back to you here as soon as possible."
 
