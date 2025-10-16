@@ -329,3 +329,54 @@ def send_confirmation_email(recipient_email: str, full_name: str, start_time: st
     except Exception as e:
         logger.error(f"Failed to send confirmation email: {e}", exc_info=True)
         return False
+    
+def send_handover_email(conversation_id: str, history: list):
+    """Sends a human handover notification with the chat history."""
+    sender_email = settings.SENDER_EMAIL
+    sender_password = settings.SENDER_APP_PASSWORD
+    recipient_email = settings.HANDOVER_EMAIL
+
+    if not all([sender_email, sender_password, recipient_email]):
+        logger.error("Email configuration is incomplete. Cannot send handover email.")
+        return False
+
+    # Format the chat history into a readable HTML string
+    history_html = ""
+    for message in history:
+        speaker = "User" if message.type == 'human' else "AI"
+        # Sanitize message content for HTML
+        import html
+        content = html.escape(message.content)
+        history_html += f'<p style="margin: 5px 0;"><strong>{speaker}:</strong> {content}</p>'
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f"Human Handover Requested: Conversation ID {conversation_id}"
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+
+    html_body = f"""
+    <html>
+    <body style="font-family: sans-serif;">
+        <h2>Human Handover Request</h2>
+        <p>A user has requested to speak with a human agent.</p>
+        <p><strong>Conversation ID:</strong> {conversation_id}</p>
+        <hr>
+        <h3>Conversation History:</h3>
+        <div style="background-color: #f4f4f4; border-left: 3px solid #ccc; padding: 10px;">
+            {history_html}
+        </div>
+    </body>
+    </html>
+    """
+    
+    msg.attach(MIMEText(html_body, 'html'))
+    
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+        logger.info(f"Handover notification sent successfully for conversation {conversation_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send handover email: {e}", exc_info=True)
+        return False

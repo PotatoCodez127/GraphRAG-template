@@ -10,7 +10,8 @@ from .action_schemas import (
     BookOnboardingCallArgs,
     CheckAvailabilityArgs,
     CancelAppointmentArgs,
-    RescheduleAppointmentArgs
+    RescheduleAppointmentArgs,
+    RequestHumanHandoverArgs
 )
 from .google_calendar import (
     get_available_slots,
@@ -99,7 +100,39 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
         logger.error(f"Booking/validation error: {e}", exc_info=True)
         return f"I'm sorry, I cannot book that appointment. {e}"
 
-# --- NEW JSON-BASED FUNCTIONS ---
+def request_human_handover(json_string: str) -> str:
+    """Handles the human handover process."""
+    logger.info(f"--- ACTION: Requesting Human Handover ---")
+    try:
+        data = json.loads(json_string)
+        # We only need the conversation_id, which the agent already knows
+        conversation_id = data["conversation_id"]
+    except (json.JSONDecodeError, KeyError) as e:
+        return f"Sorry, there was an internal error processing the handover request. Error: {e}"
+
+    try:
+        supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+
+        # 1. Fetch the conversation history
+        response = supabase.table("conversation_history").select("history").eq("conversation_id", conversation_id).single().execute()
+        
+        if not response.data or not response.data.get('history'):
+            return "Could not find the conversation history to perform the handover."
+
+        from langchain_core.messages import messages_from_dict
+        history_messages = messages_from_dict(response.data['history'])
+
+        # 2. Send the notification email
+        send_handover_email(conversation_id, history_messages)
+
+        # 3. Update the conversation status in the database
+        supabase.table("conversation_history").update({"status": "handover"}).eq("conversation_id", conversation_id).execute()
+        
+        return "Okay, I've notified a member of our team. They will review our conversation and get back to you here as soon as possible."
+
+    except Exception as e:
+        logger.error(f"Error during handover for convo {conversation_id}: {e}", exc_info=True)
+        return "Sorry, I encountered an error while trying to reach a human. Please try again."
 
 def cancel_appointment_from_json(json_string: str) -> str:
     """Cancels an appointment from a JSON string."""
@@ -178,6 +211,15 @@ def get_custom_tools() -> list:
                 "Use to reschedule an existing appointment. The input must be a single, valid JSON string with keys: "
                 "'email', 'original_start_time', and 'new_start_time'."
             )
+        ),
+        Tool(
+            name="request_human_handover",
+            func=request_human_handover,
+            description=(
+                "Use this tool when the user explicitly asks to speak to a human, a person, or a team member. "
+                "The input MUST be a single, valid JSON string with the key: 'conversation_id'."
+            )
         )
     ]
     return tools
+

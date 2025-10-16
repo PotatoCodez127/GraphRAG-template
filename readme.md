@@ -232,6 +232,12 @@ CREATE TABLE public.conversation_history (
     conversation_id TEXT NOT NULL PRIMARY KEY, -- Set as the unique Primary Key
     history JSONB NULL
 );
+-- Add a 'status' column to track if a conversation is active or handed over
+ALTER TABLE public.conversation_history
+ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
+
+-- Optional: Create an index on the status for faster lookups
+CREATE INDEX idx_conversation_status ON public.conversation_history (status);
 
 -- 3. Enable Row Level Security (RLS) - Best Practice
 -- ALTER TABLE public.conversation_history ENABLE ROW LEVEL SECURITY;

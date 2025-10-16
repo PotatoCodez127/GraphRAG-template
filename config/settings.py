@@ -10,6 +10,7 @@ class Settings:
     Centralized application settings, loaded from environment variables.
     """
     # --- Email Configuration ---
+    HANDOVER_EMAIL: str = os.getenv("HANDOVER_EMAIL")
     SENDER_EMAIL: str = os.getenv("SENDER_EMAIL")
     SENDER_APP_PASSWORD: str = os.getenv("SENDER_APP_PASSWORD")
 

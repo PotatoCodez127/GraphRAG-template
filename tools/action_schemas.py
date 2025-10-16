@@ -24,3 +24,7 @@ class RescheduleAppointmentArgs(BaseModel):
     email: str = Field(description="The email address used to book the original appointment.")
     original_start_time: str = Field(description="The original start time of the appointment to be rescheduled, in ISO 8601 format.")
     new_start_time: str = Field(description="The new desired start time for the appointment, in ISO 8601 format.")
+
+class RequestHumanHandoverArgs(BaseModel):
+    """Schema for requesting a human handover."""
+    conversation_id: str = Field(description="The unique identifier for the current user's conversation session. This is ALWAYS available to you.")

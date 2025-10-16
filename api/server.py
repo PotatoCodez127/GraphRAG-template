@@ -39,7 +39,6 @@ async def verify_api_key(x_api_key: str = Header()):
 agent_semaphore = asyncio.Semaphore(settings.CONCURRENCY_LIMIT)
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
 
-# --- NEW: Dictionary to hold a lock for each conversation ---
 conversation_locks = defaultdict(asyncio.Lock)
 
 class SupabaseChatMessageHistory(BaseChatMessageHistory):
@@ -56,7 +55,12 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
         current_history = messages_to_dict(self.messages)
         new_history = messages_to_dict(messages)
         updated_history = current_history + new_history
-        supabase.table(self.table_name).upsert({"conversation_id": self.session_id, "history": updated_history}).execute()
+        # Ensure we upsert with the active status during normal conversation
+        supabase.table(self.table_name).upsert({
+            "conversation_id": self.session_id, 
+            "history": updated_history,
+            "status": "active"
+        }).execute()
 
     def clear(self) -> None:
         supabase.table(self.table_name).delete().eq("conversation_id", self.session_id).execute()
@@ -67,10 +71,24 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat", dependencies=[Depends(verify_api_key)])
 async def chat_with_agent(request: ChatRequest):
-    # --- NEW: Get the lock for the specific conversation ID ---
     lock = conversation_locks[request.conversation_id]
 
-    async with lock: # This will make other requests for the same convo_id wait
+    async with lock:
+        # --- GATEKEEPER LOGIC ---
+        try:
+            status_response = supabase.table("conversation_history").select("status").eq("conversation_id", request.conversation_id).single().execute()
+            
+            if status_response.data and status_response.data.get('status') == 'handover':
+                logger.info(f"Conversation {request.conversation_id} is in handover. Bypassing agent.")
+                # Also save the user's message to the history so the human agent can see it
+                message_history = SupabaseChatMessageHistory(session_id=request.conversation_id, table_name=settings.DB_CONVERSATION_HISTORY_TABLE)
+                from langchain_core.messages import HumanMessage
+                message_history.add_messages([HumanMessage(content=request.query)])
+                return {"response": "A human agent will be with you shortly. Thank you for your patience."}
+        except Exception:
+            # If the conversation doesn't exist yet, it's fine to proceed
+            pass
+        
         async with agent_semaphore:
             try:
                 message_history = SupabaseChatMessageHistory(
@@ -92,7 +110,8 @@ async def chat_with_agent(request: ChatRequest):
 
                 agent_input = {
                     "input": request.query,
-                    "current_time": current_time_sast
+                    "current_time": current_time_sast,
+                    "conversation_id": request.conversation_id
                 }
                 logger.info(f"--- AGENT INPUT FOR CONVO ID: {request.conversation_id} ---")
                 logger.info(agent_input)
