@@ -11,6 +11,9 @@ from agent.agent_factory import create_agent_executor
 from langchain.memory import ConversationBufferMemory
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict, messages_to_dict
+# --- NEW IMPORT ---
+from collections import defaultdict
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,9 @@ async def verify_api_key(x_api_key: str = Header()):
 
 agent_semaphore = asyncio.Semaphore(settings.CONCURRENCY_LIMIT)
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+
+# --- NEW: Dictionary to hold a lock for each conversation ---
+conversation_locks = defaultdict(asyncio.Lock)
 
 class SupabaseChatMessageHistory(BaseChatMessageHistory):
     def __init__(self, session_id: str, table_name: str):
@@ -60,42 +66,45 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat", dependencies=[Depends(verify_api_key)])
 async def chat_with_agent(request: ChatRequest):
-    async with agent_semaphore:
-        try:
-            message_history = SupabaseChatMessageHistory(
-                session_id=request.conversation_id,
-                table_name=settings.DB_CONVERSATION_HISTORY_TABLE
-            )
-            # --- THIS IS THE FIX ---
-            memory = ConversationBufferMemory(
-                memory_key="history",
-                chat_memory=message_history,
-                return_messages=True,
-                input_key="input"  # Explicitly tell the memory which key to use
-            )
+    # --- NEW: Get the lock for the specific conversation ID ---
+    lock = conversation_locks[request.conversation_id]
 
-            agent_executor = create_agent_executor(memory)
+    async with lock: # This will make other requests for the same convo_id wait
+        async with agent_semaphore:
+            try:
+                message_history = SupabaseChatMessageHistory(
+                    session_id=request.conversation_id,
+                    table_name=settings.DB_CONVERSATION_HISTORY_TABLE
+                )
+                
+                memory = ConversationBufferMemory(
+                    memory_key="history",
+                    chat_memory=message_history,
+                    return_messages=True,
+                    input_key="input"
+                )
 
-            sast_tz = pytz.timezone("Africa/Johannesburg")
-            current_time_sast = datetime.datetime.now(sast_tz).strftime('%A, %Y-%m-%d %H:%M:%S %Z')
+                agent_executor = create_agent_executor(memory)
 
-            agent_input = {
-                "input": request.query,
-                # "history": memory.chat_memory.messages,
-                "current_time": current_time_sast
-            }
-            logger.info(f"--- AGENT INPUT FOR CONVO ID: {request.conversation_id} ---")
-            logger.info(agent_input)
-            logger.info("----------------------------------------------------")
-            
-            response = await agent_executor.ainvoke(agent_input)
+                sast_tz = pytz.timezone("Africa/Johannesburg")
+                current_time_sast = datetime.datetime.now(sast_tz).strftime('%A, %Y-%m-%d %H:%M:%S %Z')
 
-            agent_output = response.get("output")
-            if not agent_output or not agent_output.strip():
-                logger.warning(f"Agent for convo ID {request.conversation_id} generated an empty response. Sending a default message.")
-                agent_output = "I'm sorry, I seem to have lost my train of thought. Could you please tell me a little more about what you're looking for?"
+                agent_input = {
+                    "input": request.query,
+                    "current_time": current_time_sast
+                }
+                logger.info(f"--- AGENT INPUT FOR CONVO ID: {request.conversation_id} ---")
+                logger.info(agent_input)
+                logger.info("----------------------------------------------------")
+                
+                response = await agent_executor.ainvoke(agent_input)
 
-            return {"response": agent_output}
-        except Exception as e:
-            logger.error(f"Error in /chat for conversation_id {request.conversation_id}: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+                agent_output = response.get("output")
+                if not agent_output or not agent_output.strip():
+                    logger.warning(f"Agent for convo ID {request.conversation_id} generated an empty response. Sending a default message.")
+                    agent_output = "I'm sorry, I seem to have lost my train of thought. Could you please tell me a little more about what you're looking for?"
+
+                return {"response": agent_output}
+            except Exception as e:
+                logger.error(f"Error in /chat for conversation_id {request.conversation_id}: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")

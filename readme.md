@@ -180,7 +180,6 @@ create table documents (
 );
 
 -- Create a function to perform similarity searches on your documents
--- Create a function to perform similarity searches on your documents
 create or replace function match_documents (
   query_embedding vector(768),
   match_count int,
@@ -196,12 +195,12 @@ as $$
 begin
   return query
   select
-    documents.id, -- This is the fix: specifying the table for the 'id' column
+    documents.id,
     documents.content,
     documents.metadata,
     1 - (documents.embedding <=> query_embedding) as similarity
   from documents
-  where metadata @> filter
+  where documents.metadata @> filter -- Explicitly specify the table here too
   order by documents.embedding <=> query_embedding
   limit match_count;
 end;
@@ -212,7 +211,7 @@ DROP TABLE IF EXISTS public.ingestion_log;
 create table ingestion_log (
   -- The path of the file that was ingested
   file_path text primary key,
-  
+
   -- A checksum of the file to detect if it has changed
   checksum text,
 
