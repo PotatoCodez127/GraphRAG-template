@@ -46,7 +46,6 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
     except (json.JSONDecodeError, ValidationError) as e:
         return f"I'm sorry, there was a problem with the booking details. Error: {e}"
 
-    # --- ADD THIS BUDGET CHECK ---
     if validated_args.monthly_budget < 8000:
         return (
             "Thank you for sharing that. Based on the budget you provided, it seems like our 'Project Pipeline AI' "
@@ -61,7 +60,7 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
     start_time = validated_args.start_time
     goal = validated_args.goal
     monthly_budget = validated_args.monthly_budget
-    
+
     summary = f"Onboard Call with {company_name} | Zappies AI"
     description = (
         f"Onboarding call with {full_name} from {company_name} to discuss the 'Project Pipeline AI'.\n\n"
@@ -70,12 +69,12 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
     )
     
     try:
-        created_event = create_calendar_event(start_time, summary, description, [email])
         
         supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
         
+        # Insert the meeting details into Supabase without a calendar event ID
         response = supabase.table("meetings").insert({
-            "google_calendar_event_id": created_event.get('id'),
+            # "google_calendar_event_id" is now omitted
             "full_name": full_name,
             "email": email,
             "company_name": company_name,

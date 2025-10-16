@@ -13,6 +13,7 @@ from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage, messages_from_dict, messages_to_dict
 from collections import defaultdict
 from fastapi.responses import HTMLResponse
+from tools.google_calendar import create_calendar_event
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -111,20 +112,42 @@ async def chat_with_agent(request: ChatRequest):
 
 @app.get("/confirm-meeting/{meeting_id}", response_class=HTMLResponse)
 async def confirm_meeting(meeting_id: str):
-    """Endpoint to confirm a meeting from an email link."""
+    """Endpoint to confirm a meeting, create a calendar event, and update the DB."""
     try:
-        response = supabase.table("meetings").select("id, status").eq("id", meeting_id).single().execute()
+        # Fetch the full meeting details from the database
+        response = supabase.table("meetings").select("*").eq("id", meeting_id).single().execute()
         
         if not response.data:
             return "<h1>Meeting Not Found</h1><p>This confirmation link is invalid or has expired.</p>"
         
-        if response.data['status'] == 'confirmed':
+        meeting_details = response.data
+        
+        if meeting_details['status'] == 'confirmed':
             return "<h1>Meeting Already Confirmed</h1><p>Your spot was already secured. We look forward to seeing you!</p>"
 
-        supabase.table("meetings").update({"status": "confirmed"}).eq("id", meeting_id).execute()
+        # --- NEW LOGIC: Create the Google Calendar event ---
+        summary = f"Onboard Call with {meeting_details['company_name']} | Zappies AI"
+        description = (
+            f"Onboarding call with {meeting_details['full_name']} from {meeting_details['company_name']} to discuss the 'Project Pipeline AI'.\n\n"
+            f"Stated Goal: {meeting_details['goal']}\n"
+            f"Stated Budget: R{meeting_details['monthly_budget']}/month"
+        )
         
-        logger.info(f"Meeting {meeting_id} confirmed successfully.")
-        return "<h1>Thank You!</h1><p>Your meeting has been successfully confirmed. We've saved your spot!</p>"
+        created_event = create_calendar_event(
+            start_time=meeting_details['start_time'],
+            summary=summary,
+            description=description,
+            attendees=[meeting_details['email']]
+        )
+        
+        # Now, update the meeting record with the new calendar event ID and status
+        supabase.table("meetings").update({
+            "status": "confirmed",
+            "google_calendar_event_id": created_event.get('id')
+        }).eq("id", meeting_id).execute()
+        
+        logger.info(f"Meeting {meeting_id} confirmed and calendar event created successfully.")
+        return "<h1>Thank You!</h1><p>Your meeting has been successfully confirmed. We've added it to our calendar and look forward to speaking with you!</p>"
 
     except Exception as e:
         logger.error(f"Error confirming meeting {meeting_id}: {e}", exc_info=True)
