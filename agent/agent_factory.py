@@ -1,12 +1,15 @@
 # agent/agent_factory.py
 import logging
 import sys
+from typing import Any
+import uuid
 
 # LangChain Imports
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_core.documents import Document
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.tools import Tool, render_text_description
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_neo4j import GraphCypherQAChain, Neo4jGraph
@@ -20,8 +23,24 @@ from supabase.client import Client, create_client
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
+# --- UPDATED CALLBACK HANDLER CLASS ---
+class ToolCallbackHandler(BaseCallbackHandler):
+    """Callback handler to store tool calls in the correct format."""
+    def __init__(self):
+        self.tool_calls = []
 
-def create_agent_executor(memory):
+    def on_agent_action(self, action, **kwargs: Any) -> Any:
+        """Run when agent takes an action and capture the full tool call details."""
+        if action.tool:
+            self.tool_calls.append(
+                {
+                    "name": action.tool,
+                    "args": action.tool_input,
+                    "id": str(uuid.uuid4()) # Generate a unique ID for each tool call
+                }
+            )
+
+def create_agent_executor(memory, conversation_id: str):
     """Builds and returns the complete AI agent executor."""
     logger.info("🚀 Creating new agent executor instance...")
     llm = ChatGoogleGenerativeAI(
@@ -51,24 +70,17 @@ def create_agent_executor(memory):
     supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
     embeddings = GoogleGenerativeAIEmbeddings(model=settings.EMBEDDING_MODEL)
     
-    # --- THIS IS THE DEFINITIVE FIX ---
-    # This function manually creates an embedding and calls Supabase's RPC 
-    # to find matching documents, bypassing the broken LangChain code.
     def run_vector_search(query: str, k: int = 4) -> list[Document]:
-        """
-        Performs a similarity search on the Supabase vector store.
-        """
+        """Performs a similarity search on the Supabase vector store."""
         logger.info(f"--- ACTION: Performing vector search for query: '{query}' ---")
         query_embedding = embeddings.embed_query(query)
         
-        # Call the Supabase function directly
         response = supabase.rpc(settings.DB_VECTOR_QUERY_NAME, {
             'query_embedding': query_embedding,
             'match_count': k,
             'filter': {}
         }).execute()
 
-        # Format the response into LangChain Document objects
         match_result = [
             Document(
                 page_content=doc["content"],
@@ -80,7 +92,7 @@ def create_agent_executor(memory):
 
     vector_tool = Tool(
         name="General_Information_Search",
-        func=run_vector_search, # Use our new, stable function
+        func=run_vector_search,
         description="Use for general, conceptual, or 'how-to' questions."
     )
     
@@ -97,14 +109,17 @@ def create_agent_executor(memory):
     # --- Agent and Executor Construction ---
     agent_runnable = create_react_agent(llm, all_tools, prompt)
     
+    tool_callback = ToolCallbackHandler()
+    
     agent_executor = AgentExecutor(
         agent=agent_runnable,
         tools=all_tools,
         memory=memory,
         verbose=True,
         handle_parsing_errors="I made a formatting error. I will correct it and try again.",
-        max_iterations=settings.AGENT_MAX_ITERATIONS
+        max_iterations=settings.AGENT_MAX_ITERATIONS,
+        callbacks=[tool_callback]
     )
     
-    logger.info(f"📦 Returning AgentExecutor instance: {type(agent_executor)}")
-    return agent_executor
+    logger.info(f"📦 Returning AgentExecutor instance and callback: {type(agent_executor)}")
+    return agent_executor, tool_callback

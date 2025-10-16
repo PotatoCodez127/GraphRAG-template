@@ -10,7 +10,7 @@ from config.settings import settings
 from agent.agent_factory import create_agent_executor
 from langchain.memory import ConversationBufferMemory
 from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.messages import BaseMessage, messages_from_dict, messages_to_dict
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, messages_from_dict, messages_to_dict
 from collections import defaultdict
 from fastapi.responses import HTMLResponse
 from tools.google_calendar import create_calendar_event
@@ -48,14 +48,25 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
 
     @property
     def messages(self):
+        """Retrieve messages from Supabase, correctly handling new conversations."""
         response = supabase.table(self.table_name).select("history").eq("conversation_id", self.session_id).execute()
-        return messages_from_dict(response.data[0]['history']) if response.data else []
+        return messages_from_dict(response.data[0]['history']) if response.data and response.data[0].get('history') else []
 
     def add_messages(self, messages: list[BaseMessage]) -> None:
-        current_history = messages_to_dict(self.messages)
-        new_history = messages_to_dict(messages)
-        updated_history = current_history + new_history
-        # Ensure we upsert with the active status during normal conversation
+        """Save messages to Supabase, correctly formatting tool calls."""
+        current_history_dicts = messages_to_dict(self.messages)
+        
+        # This is the new logic to handle tool calls
+        new_history_dicts = []
+        for message in messages:
+            message_dict = messages_to_dict([message])[0]
+            if isinstance(message, AIMessage) and hasattr(message, 'tool_calls') and message.tool_calls:
+                # Ensure tool_calls in the dictionary are correctly structured
+                message_dict['data']['tool_calls'] = message.tool_calls
+            new_history_dicts.append(message_dict)
+
+        updated_history = current_history_dicts + new_history_dicts
+        
         supabase.table(self.table_name).upsert({
             "conversation_id": self.session_id, 
             "history": updated_history,
@@ -74,19 +85,15 @@ async def chat_with_agent(request: ChatRequest):
     lock = conversation_locks[request.conversation_id]
 
     async with lock:
-        # --- GATEKEEPER LOGIC ---
         try:
-            status_response = supabase.table("conversation_history").select("status").eq("conversation_id", request.conversation_id).single().execute()
+            status_response = supabase.table("conversation_history").select("status").eq("conversation_id", request.conversation_id).execute()
             
-            if status_response.data and status_response.data.get('status') == 'handover':
+            if status_response.data and status_response.data[0].get('status') == 'handover':
                 logger.info(f"Conversation {request.conversation_id} is in handover. Bypassing agent.")
-                # Also save the user's message to the history so the human agent can see it
                 message_history = SupabaseChatMessageHistory(session_id=request.conversation_id, table_name=settings.DB_CONVERSATION_HISTORY_TABLE)
-                from langchain_core.messages import HumanMessage
                 message_history.add_messages([HumanMessage(content=request.query)])
                 return {"response": "A human agent will be with you shortly. Thank you for your patience."}
         except Exception:
-            # If the conversation doesn't exist yet, it's fine to proceed
             pass
         
         async with agent_semaphore:
@@ -103,7 +110,7 @@ async def chat_with_agent(request: ChatRequest):
                     input_key="input"
                 )
 
-                agent_executor = create_agent_executor(memory)
+                agent_executor, tool_callback = create_agent_executor(memory, conversation_id=request.conversation_id)
 
                 sast_tz = pytz.timezone("Africa/Johannesburg")
                 current_time_sast = datetime.datetime.now(sast_tz).strftime('%A, %Y-%m-%d %H:%M:%S %Z')
@@ -120,6 +127,17 @@ async def chat_with_agent(request: ChatRequest):
                 response = await agent_executor.ainvoke(agent_input)
 
                 agent_output = response.get("output")
+                
+                tool_calls = tool_callback.tool_calls
+                ai_message = AIMessage(content=agent_output)
+                if tool_calls:
+                    ai_message.tool_calls = tool_calls
+
+                message_history.add_messages([
+                    HumanMessage(content=request.query),
+                    ai_message
+                ])
+
                 if not agent_output or not agent_output.strip():
                     logger.warning(f"Agent for convo ID {request.conversation_id} generated an empty response. Sending a default message.")
                     agent_output = "I'm sorry, I seem to have lost my train of thought. Could you please tell me a little more about what you're looking for?"
@@ -133,7 +151,6 @@ async def chat_with_agent(request: ChatRequest):
 async def confirm_meeting(meeting_id: str):
     """Endpoint to confirm a meeting, create a calendar event, and update the DB."""
     try:
-        # Fetch the full meeting details from the database
         response = supabase.table("meetings").select("*").eq("id", meeting_id).single().execute()
         
         if not response.data:
@@ -144,7 +161,6 @@ async def confirm_meeting(meeting_id: str):
         if meeting_details['status'] == 'confirmed':
             return "<h1>Meeting Already Confirmed</h1><p>Your spot was already secured. We look forward to seeing you!</p>"
 
-        # --- NEW LOGIC: Create the Google Calendar event ---
         summary = f"Onboard Call with {meeting_details['company_name']} | Zappies AI"
         description = (
             f"Onboarding call with {meeting_details['full_name']} from {meeting_details['company_name']} to discuss the 'Project Pipeline AI'.\n\n"
@@ -159,7 +175,6 @@ async def confirm_meeting(meeting_id: str):
             attendees=[meeting_details['email']]
         )
         
-        # Now, update the meeting record with the new calendar event ID and status
         supabase.table("meetings").update({
             "status": "confirmed",
             "google_calendar_event_id": created_event.get('id')
