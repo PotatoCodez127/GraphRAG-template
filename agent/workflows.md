@@ -29,7 +29,7 @@ This document outlines the primary conversational paths for the Zappies AI assis
     * *(User Responds)*
 
 * **Step 5: The Final Booking Sequence**
-    * **AI**: "The best way to see it in action is with a quick, no-obligation 15-minute onboarding call. Open to that?"
+    * **AI**: "The best way to see it in action is with a quick, no-obligation 60-minute onboarding call. Open to that?"
     * *(User Responds with an affirmative, like "Yes" or "Sure")*
     * **AI**: "Great! To get you booked, what's your full name?"
     * *(User provides their name)*
@@ -61,5 +61,5 @@ This document outlines the primary conversational paths for the Zappies AI assis
     * *(User Responds)*
 
 * **Step 3: Pivot Back to the Call to Action**
-    * **AI**: "We can go over the specifics of the guarantee and how it would apply to your business on that quick 15-minute call."
+    * **AI**: "We can go over the specifics of the guarantee and how it would apply to your business on that quick 60-minute call."
     * **AI**: "Are you free sometime this week to chat?"
