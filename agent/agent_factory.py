@@ -3,6 +3,7 @@ import logging
 import sys
 from typing import Any
 import uuid
+import json 
 
 # LangChain Imports
 from langchain.agents import AgentExecutor, create_react_agent
@@ -23,7 +24,6 @@ from supabase.client import Client, create_client
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
-# --- UPDATED CALLBACK HANDLER CLASS ---
 class ToolCallbackHandler(BaseCallbackHandler):
     """Callback handler to store tool calls in the correct, structured format."""
     def __init__(self):
@@ -32,11 +32,25 @@ class ToolCallbackHandler(BaseCallbackHandler):
     def on_agent_action(self, action, **kwargs: Any) -> Any:
         """Run when agent takes an action and capture the full tool call details."""
         if action.tool:
+            tool_input = action.tool_input
+            # --- THIS IS THE FIX ---
+            # Ensure the tool arguments are always a dictionary
+            if isinstance(tool_input, str):
+                try:
+                    # If it's a JSON string, parse it into a dict
+                    args = json.loads(tool_input)
+                except json.JSONDecodeError:
+                    # If it's a regular string, wrap it in a dict
+                    args = {"query": tool_input}
+            else:
+                # If it's already a dict, use it as is
+                args = tool_input
+
             self.tool_calls.append(
                 {
                     "name": action.tool,
-                    "args": action.tool_input,
-                    "id": str(uuid.uuid4()) # Generate a unique ID for each tool call
+                    "args": args, # Use the processed 'args' dictionary
+                    "id": str(uuid.uuid4())
                 }
             )
 
