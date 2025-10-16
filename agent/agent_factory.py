@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # --- UPDATED CALLBACK HANDLER CLASS ---
 class ToolCallbackHandler(BaseCallbackHandler):
-    """Callback handler to store tool calls in the correct format."""
+    """Callback handler to store tool calls in the correct, structured format."""
     def __init__(self):
         self.tool_calls = []
 

@@ -48,7 +48,9 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
 
     @property
     def messages(self):
-        """Retrieve messages from Supabase, correctly handling new conversations."""
+        """Retrieve messages from Supabase, handling new conversations gracefully."""
+        # --- THIS IS A FIX ---
+        # Removed .single() to prevent errors on the first turn of a conversation.
         response = supabase.table(self.table_name).select("history").eq("conversation_id", self.session_id).execute()
         return messages_from_dict(response.data[0]['history']) if response.data and response.data[0].get('history') else []
 
@@ -56,12 +58,11 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
         """Save messages to Supabase, correctly formatting tool calls."""
         current_history_dicts = messages_to_dict(self.messages)
         
-        # This is the new logic to handle tool calls
         new_history_dicts = []
         for message in messages:
             message_dict = messages_to_dict([message])[0]
             if isinstance(message, AIMessage) and hasattr(message, 'tool_calls') and message.tool_calls:
-                # Ensure tool_calls in the dictionary are correctly structured
+                # Ensure the tool_calls are in the correct format before saving
                 message_dict['data']['tool_calls'] = message.tool_calls
             new_history_dicts.append(message_dict)
 
@@ -86,6 +87,8 @@ async def chat_with_agent(request: ChatRequest):
 
     async with lock:
         try:
+            # --- THIS IS A FIX ---
+            # Removed .single() to prevent errors on the first turn of a conversation.
             status_response = supabase.table("conversation_history").select("status").eq("conversation_id", request.conversation_id).execute()
             
             if status_response.data and status_response.data[0].get('status') == 'handover':
