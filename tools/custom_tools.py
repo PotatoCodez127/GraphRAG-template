@@ -20,10 +20,7 @@ from .google_calendar import (
     update_calendar_event,
     delete_calendar_event
 )
-from .email_sender import (
-    send_confirmation_email,
-    send_handover_email
-)
+from .email_sender import send_confirmation_email
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
