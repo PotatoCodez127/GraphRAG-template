@@ -3,6 +3,8 @@ import asyncio
 import logging
 import datetime
 import pytz
+import json
+
 from fastapi import FastAPI, HTTPException, Depends, Header, status
 from pydantic import BaseModel
 from supabase.client import Client, create_client
@@ -48,11 +50,33 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
 
     @property
     def messages(self):
-        """Retrieve messages from Supabase, handling new conversations gracefully."""
-        # --- THIS IS A FIX ---
-        # Removed .single() to prevent errors on the first turn of a conversation.
+        """Retrieve and clean messages from Supabase."""
         response = supabase.table(self.table_name).select("history").eq("conversation_id", self.session_id).execute()
-        return messages_from_dict(response.data[0]['history']) if response.data and response.data[0].get('history') else []
+        
+        if not response.data or not response.data[0].get('history'):
+            return []
+
+        history_data = response.data[0]['history']
+
+        # --- THIS IS THE FIX ---
+        # Iterate through the history and fix any malformed tool_calls before validation
+        for message_data in history_data:
+            if message_data.get("type") == "ai":
+                ai_data = message_data.get("data", {})
+                tool_calls = ai_data.get("tool_calls")
+                if tool_calls and isinstance(tool_calls, list):
+                    for tool_call in tool_calls:
+                        # If args is a string, attempt to convert it to a dict
+                        if "args" in tool_call and isinstance(tool_call["args"], str):
+                            try:
+                                # First, try to parse it as JSON
+                                tool_call["args"] = json.loads(tool_call["args"])
+                            except json.JSONDecodeError:
+                                # If it's not JSON, wrap it in a dict
+                                tool_call["args"] = {"query": tool_call["args"]}
+        
+        return messages_from_dict(history_data)
+
 
     def add_messages(self, messages: list[BaseMessage]) -> None:
         """Save messages to Supabase, correctly formatting tool calls."""
