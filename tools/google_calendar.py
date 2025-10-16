@@ -96,20 +96,25 @@ def delete_calendar_event(event_id: str) -> None:
 
 # --- THIS FUNCTION IS UPDATED ---
 def create_calendar_event(start_time: str, summary: str, description: str, attendees: list[str]) -> dict:
-    """Creates a new event and tags it with a searchable private property."""
+    """Creates a new event with an explicit timezone."""
     service = get_calendar_service()
     sast_tz = pytz.timezone("Africa/Johannesburg")
-    start = parse(start_time)
-    if start.tzinfo is None:
-        start = sast_tz.localize(start)
+
+    # --- THIS IS THE FIX ---
+    # Parse the incoming time string, which is naive (no timezone)
+    naive_start_time = parse(start_time)
+    # Localize the naive time, explicitly telling it that it represents a time in SAST
+    start = sast_tz.localize(naive_start_time)
+
     now_sast = datetime.datetime.now(sast_tz)
     if start < now_sast:
         raise ValueError("Cannot book an appointment in the past.")
     if start.date() == now_sast.date():
         raise ValueError("Cannot book a same-day appointment. Please book for the next business day or later.")
+    
+    # The end time will correctly inherit the timezone from the start time
     end = start + datetime.timedelta(minutes=60)
 
-    # Add the user's email to the description for human readability
     full_description = description
     lead_email = attendees[0] if attendees else 'N/A'
     if lead_email != 'N/A':
@@ -118,10 +123,11 @@ def create_calendar_event(start_time: str, summary: str, description: str, atten
     event = {
         'summary': summary, 
         'description': full_description,
+        # The .isoformat() method on a timezone-aware object now includes the offset 
+        # (e.g., +02:00), which is exactly what the API needs.
         'start': {'dateTime': start.isoformat(), 'timeZone': 'Africa/Johannesburg'},
         'end': {'dateTime': end.isoformat(), 'timeZone': 'Africa/Johannesburg'},
         'reminders': {'useDefault': False, 'overrides': [{'method': 'email', 'minutes': 24 * 60}, {'method': 'popup', 'minutes': 10}]},
-        # Add a private, searchable property to tag the event with the lead's email
         'extendedProperties': {
             'private': {
                 'lead_email': lead_email
