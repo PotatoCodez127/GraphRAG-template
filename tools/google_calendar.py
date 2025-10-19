@@ -18,7 +18,6 @@ def get_calendar_service():
     service = build('calendar', 'v3', credentials=creds)
     return service
 
-# ... (get_available_slots remains the same) ...
 def get_available_slots(date: str) -> list[str]:
     service = get_calendar_service()
     sast_tz = pytz.timezone("Africa/Johannesburg")

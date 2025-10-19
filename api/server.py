@@ -160,10 +160,10 @@ async def chat_with_agent(request: ChatRequest):
                 if tool_calls:
                     ai_message.tool_calls = tool_calls
 
-                message_history.add_messages([
-                    HumanMessage(content=request.query),
-                    ai_message
-                ])
+                # message_history.add_messages([
+                #     HumanMessage(content=request.query),
+                #     ai_message
+                # ])
 
                 if not agent_output or not agent_output.strip():
                     logger.warning(f"Agent for convo ID {request.conversation_id} generated an empty response. Sending a default message.")
