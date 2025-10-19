@@ -87,6 +87,15 @@ def book_zappies_onboarding_call_from_json(json_string: str) -> str:
         
         meeting_id = response.data[0]['id']
 
+        try:
+            supabase.table("conversation_history").update(
+                {"meeting_booked": True}
+            ).eq("conversation_id", conversation_id).execute()
+            logger.info(f"Successfully marked conversation {conversation_id} as 'meeting_booked = true'.")
+        except Exception as e:
+            # Log this error, but don't stop the user-facing process
+            logger.error(f"Error updating conversation_history for {conversation_id}: {e}", exc_info=True)
+
         send_confirmation_email(
             recipient_email=email,
             full_name=full_name,
